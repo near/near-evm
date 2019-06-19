@@ -1,17 +1,12 @@
-use crate::{deploy_code, run_command};
-
-use super::near_stubs::{set_input, set_sender};
-use crate::{DeployCodeInput, RunCommandInput};
 use ethabi::Address;
 use ethabi_contract::use_contract;
 
-use_contract!(cryptokitties, "src/tests/kittyCore.abi");
+use crate::{deploy_code, run_command};
+use crate::{DeployCodeInput, RunCommandInput, sender_name_to_eth_address};
 
-fn sender_name_to_eth_address(sender: &str) -> Address {
-    let mut sender = sender.to_string().into_bytes();
-    sender.resize(20, 0);
-    Address::from_slice(&sender[0..20])
-}
+use super::near_stubs::{set_input, set_sender};
+
+use_contract!(cryptokitties, "src/tests/kittyCore.abi");
 
 fn set_sender_name(sender: &Address) {
     set_sender(sender.as_bytes().to_vec());

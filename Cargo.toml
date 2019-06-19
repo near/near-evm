@@ -19,7 +19,6 @@ wasm-bindgen = "0.2"
 
 [dev-dependencies]
 lazy_static = "1.3"
-hex-literal = "0.2"
 ethabi = "8.0.0"
 ethabi-contract = "8.0.0"
 ethabi-derive = "8.0.0"

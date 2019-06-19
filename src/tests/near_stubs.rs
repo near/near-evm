@@ -1,8 +1,10 @@
-use crate::near_native::DATA_TYPE_INPUT;
-use crate::near_native::DATA_TYPE_ORIGINATOR_ACCOUNT_ID;
-use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
+
+use lazy_static::lazy_static;
+
+use crate::near_native::DATA_TYPE_INPUT;
+use crate::near_native::DATA_TYPE_ORIGINATOR_ACCOUNT_ID;
 
 lazy_static! {
     static ref STORAGE: Mutex<HashMap<Vec<u8>, Vec<u8>>> = Default::default();

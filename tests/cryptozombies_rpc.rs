@@ -1,17 +1,18 @@
 #[macro_use]
 extern crate ethabi_derive;
-
 extern crate near_evm;
-mod rpc_user;
 
 use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
-use near_evm::{sender_name_to_eth_address, DeployCodeInput, RunCommandInput};
 use near_primitives::crypto::signer::InMemorySigner;
 use near_primitives::transaction::{
     CreateAccountTransaction, DeployContractTransaction, FunctionCallTransaction, TransactionBody,
 };
+
+use near_evm::{DeployCodeInput, RunCommandInput, sender_name_to_eth_address};
 use rpc_user::{RpcUser, User};
+
+mod rpc_user;
 
 use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 

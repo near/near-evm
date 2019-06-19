@@ -1,9 +1,10 @@
-use crate::{deploy_code, run_command};
-
-use super::near_stubs::{get_return_value, set_input, set_sender};
-use crate::{DeployCodeInput, RunCommandInput, sender_name_to_eth_address};
 use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
+
+use crate::{deploy_code, run_command};
+use crate::{DeployCodeInput, RunCommandInput, sender_name_to_eth_address};
+
+use super::near_stubs::{get_return_value, set_input, set_sender};
 
 use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 

@@ -1,14 +1,15 @@
+use std::sync::Arc;
+
 use ethereum_types::{Address, H256, U256};
 use parity_bytes::Bytes;
-use std::sync::Arc;
 use vm::{
     CallType, ContractCreateResult, CreateContractAddress, EnvInfo, MessageCallResult, Result,
     ReturnData, Schedule, TrapKind,
 };
 
+use super::{get_eth_balance, sender_as_eth};
 use super::debug;
 use super::near_native;
-use super::{get_eth_balance, sender_as_eth};
 
 #[derive(Default)]
 pub struct FakeExt {

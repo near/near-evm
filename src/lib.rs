@@ -80,7 +80,7 @@ fn sender() -> Vec<u8> {
     read(
         near_native::DATA_TYPE_ORIGINATOR_ACCOUNT_ID,
         0,
-        0 as (*const u8),
+        std::ptr::null(),
     )
 }
 

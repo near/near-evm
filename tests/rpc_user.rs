@@ -1,20 +1,21 @@
+use std::convert::From;
+use std::convert::TryInto;
+
 use actix::System;
 use near_client::StatusResponse;
-use near_jsonrpc::client::{new_client, JsonRpcClient};
+use near_jsonrpc::client::{JsonRpcClient, new_client};
 use near_primitives::account::AccessKey;
 use near_primitives::crypto::signature::PublicKey;
 use near_primitives::hash::CryptoHash;
 use near_primitives::receipt::ReceiptInfo;
 use near_primitives::rpc::{AccountViewCallResult, QueryResponse, ViewStateResult};
-use near_primitives::serialize::{to_base, BaseEncode};
+use near_primitives::serialize::{BaseEncode, to_base};
 use near_primitives::transaction::{
     FinalTransactionResult, ReceiptTransaction, SignedTransaction, TransactionResult,
 };
 use near_primitives::types::{AccountId, Balance, MerkleHash};
 use near_protos::signed_transaction as transaction_proto;
 use protobuf::Message;
-use std::convert::TryInto;
-use std::convert::From;
 
 pub trait User {
     fn view_account(&self, account_id: &AccountId) -> Result<AccountViewCallResult, String>;

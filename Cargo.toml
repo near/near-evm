@@ -2,6 +2,7 @@
 name = "near-evm"
 edition = "2018"
 version = "0.1.0"
+authors = ["Near Inc <hello@nearprotocol.com>"]
 license = "GPL-3.0"
 description = "EVM interpreter as a NEAR smart contract"
 publish = false
@@ -23,12 +24,11 @@ ethabi = "8.0.0"
 ethabi-contract = "8.0.0"
 ethabi-derive = "8.0.0"
 protobuf = "2.4"
-near-jsonrpc = { git = "https://github.com/nearprotocol/nearcore" }
+near-jsonrpc-client = { git = "https://github.com/nearprotocol/nearcore" }
 near-primitives = { git = "https://github.com/nearprotocol/nearcore" }
 near-protos = { git = "https://github.com/nearprotocol/nearcore" }
-near-client = { git = "https://github.com/nearprotocol/nearcore" } # for StatusResponse
-actix = "0.8.2"
-futures = "0.1.27"
+actix = "0.8.1"
+futures = "0.1"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

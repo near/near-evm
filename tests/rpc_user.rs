@@ -2,13 +2,12 @@ use std::convert::From;
 use std::convert::TryInto;
 
 use actix::System;
-use near_client::StatusResponse;
-use near_jsonrpc::client::{JsonRpcClient, new_client};
+use near_jsonrpc_client::{JsonRpcClient, new_client};
 use near_primitives::account::AccessKey;
 use near_primitives::crypto::signature::PublicKey;
 use near_primitives::hash::CryptoHash;
 use near_primitives::receipt::ReceiptInfo;
-use near_primitives::rpc::{AccountViewCallResult, QueryResponse, ViewStateResult};
+use near_primitives::rpc::{AccountViewCallResult, QueryResponse, ViewStateResult, StatusResponse};
 use near_primitives::serialize::{BaseEncode, to_base};
 use near_primitives::transaction::{
     FinalTransactionResult, ReceiptTransaction, SignedTransaction, TransactionResult,

@@ -8,7 +8,7 @@ use near_primitives::crypto::signature::PublicKey;
 use near_primitives::hash::CryptoHash;
 use near_primitives::receipt::ReceiptInfo;
 use near_primitives::rpc::{AccountViewCallResult, QueryResponse, ViewStateResult, StatusResponse};
-use near_primitives::serialize::{BaseEncode, to_base};
+use near_primitives::serialize::{BaseEncode, to_base, to_base64};
 use near_primitives::transaction::{
     FinalTransactionResult, ReceiptTransaction, SignedTransaction, TransactionResult,
 };
@@ -100,7 +100,6 @@ impl User for RpcUser {
         let x = self
             .query(format!("account/{}", account_id), vec![])?
             .try_into();
-        println!("OOOHO {:?}", x);
         x
     }
 
@@ -111,7 +110,7 @@ impl User for RpcUser {
 
     fn add_transaction(&self, transaction: SignedTransaction) -> Result<(), String> {
         let proto: transaction_proto::SignedTransaction = transaction.into();
-        let bytes = to_base(&proto.write_to_bytes().unwrap());
+        let bytes = to_base64(&proto.write_to_bytes().unwrap());
         let _ = self.actix(move |mut client| {
             System::new("actix").block_on(futures::lazy(|| client.broadcast_tx_async(bytes)))
         })?;
@@ -123,7 +122,7 @@ impl User for RpcUser {
         transaction: SignedTransaction,
     ) -> Result<FinalTransactionResult, String> {
         let proto: transaction_proto::SignedTransaction = transaction.into();
-        let bytes = to_base(&proto.write_to_bytes().unwrap());
+        let bytes = to_base64(&proto.write_to_bytes().unwrap());
         self.actix(move |mut client| {
             System::new("actix").block_on(futures::lazy(|| client.broadcast_tx_commit(bytes)))
         })

@@ -8,9 +8,9 @@ description = "EVM interpreter as a NEAR smart contract"
 publish = false
 
 [dependencies]
-evm = { git = "https://github.com/paritytech/parity-ethereum" }
-vm = { git = "https://github.com/paritytech/parity-ethereum" }
-parity-bytes = { git = "https://github.com/paritytech/parity-common" }
+evm = { git = "https://github.com/paritytech/parity-ethereum", rev = "eed630a002bbebed3a3097127f2483213ff52079" }
+vm = { git = "https://github.com/paritytech/parity-ethereum", rev = "eed630a002bbebed3a3097127f2483213ff52079" }
+parity-bytes = "0.1.0"
 ethereum-types = "0.6.0"
 serde = "1.0"
 serde_derive = "1.0"
@@ -28,7 +28,7 @@ near-jsonrpc-client = { git = "https://github.com/nearprotocol/nearcore" }
 near-primitives = { git = "https://github.com/nearprotocol/nearcore" }
 near-protos = { git = "https://github.com/nearprotocol/nearcore" }
 actix = "0.8.1"
-futures = "0.1"
+futures = "0.1.27"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

@@ -16,6 +16,8 @@ mod rpc_user;
 
 use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 
+const CONTRACT_NAME: &str = "near_evm";
+
 fn create_account(client: &RpcUser, account_signer: &InMemorySigner) {
     let devnet_signer = InMemorySigner::from_seed("test.near", "seed0");
     let create_account = CreateAccountTransaction {
@@ -25,7 +27,7 @@ fn create_account(client: &RpcUser, account_signer: &InMemorySigner) {
             + 1,
         originator: devnet_signer.account_id.clone(),
         new_account_id: account_signer.account_id.clone(),
-        amount: 1_000_000_000,
+        amount: 10_000_000_000,
         public_key: account_signer.public_key.as_ref().to_vec(),
     };
     let transaction = TransactionBody::CreateAccount(create_account).sign(&devnet_signer);
@@ -39,7 +41,7 @@ fn deploy_evm(client: &RpcUser, account_signer: &InMemorySigner) {
             .get_account_nonce(&account_signer.account_id)
             .unwrap_or_default()
             + 1,
-        contract_id: "near_evm".to_string(),
+        contract_id: CONTRACT_NAME.to_string(),
         wasm_byte_array: include_bytes!("../pkg/near_evm_bg.wasm").to_vec(),
     };
     let transaction = TransactionBody::DeployContract(deploy_contract).sign(account_signer);
@@ -51,7 +53,7 @@ fn deploy_evm(client: &RpcUser, account_signer: &InMemorySigner) {
 fn deploy_cryptozombies(client: &RpcUser, account_signer: &InMemorySigner) {
     let zombie_code = include_bytes!("../src/tests/zombieAttack.bin").to_vec();
     let run = DeployCodeInput {
-        contract_address: "zombies".to_string(),
+        contract_address: "cryptozombies".to_string(),
         bytecode: String::from_utf8(zombie_code).unwrap(),
     };
     let call = FunctionCallTransaction {
@@ -60,7 +62,7 @@ fn deploy_cryptozombies(client: &RpcUser, account_signer: &InMemorySigner) {
             .unwrap_or_default()
             + 1,
         originator: account_signer.account_id.clone(),
-        contract_id: "near_evm".to_string(),
+        contract_id: CONTRACT_NAME.to_string(),
         method_name: "deploy_code".to_string().into_bytes(),
         args: serde_json::to_string(&run).unwrap().into_bytes(),
         amount: 1_000_000_000,
@@ -82,7 +84,7 @@ fn create_random_zombie(client: &RpcUser, account_signer: &InMemorySigner, name:
             .unwrap_or_default()
             + 1,
         originator: account_signer.account_id.clone(),
-        contract_id: "near_evm".to_string(),
+        contract_id: CONTRACT_NAME.to_string(),
         method_name: "run_command".to_string().into_bytes(),
         args: serde_json::to_string(&run).unwrap().into_bytes(),
         amount: 1_000_000_000,
@@ -108,7 +110,7 @@ fn get_zombies_by_owner(
             .unwrap_or_default()
             + 1,
         originator: account_signer.account_id.clone(),
-        contract_id: "near_evm".to_string(),
+        contract_id: CONTRACT_NAME.to_string(),
         method_name: "run_command".to_string().into_bytes(),
         args: serde_json::to_string(&run).unwrap().into_bytes(),
         amount: 1_000_000_000,
@@ -122,11 +124,9 @@ fn get_zombies_by_owner(
 
 #[test]
 fn test_zombie() {
-    //    System::new("actix").block_on(futures::lazy(|| {
     let addr = "localhost:3030";
     let user = RpcUser::new(addr);
-    let signer = InMemorySigner::from_seed("near_evm", "near_evm");
-    println!("OK HERE WE GO");
+    let signer = InMemorySigner::from_seed(CONTRACT_NAME, CONTRACT_NAME);
     create_account(&user, &signer);
     deploy_evm(&user, &signer);
     deploy_cryptozombies(&user, &signer);
@@ -137,6 +137,4 @@ fn test_zombie() {
         sender_name_to_eth_address(&signer.account_id),
     );
     assert_eq!(zombies, vec![Uint::from(0)]);
-    //        future::ok::<(), ()>(())
-    //    })).unwrap();
 }

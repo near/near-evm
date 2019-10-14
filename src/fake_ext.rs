@@ -6,23 +6,37 @@ use vm::{
     CallType, ContractCreateResult, CreateContractAddress, EnvInfo, MessageCallResult, Result,
     ReturnData, Schedule, TrapKind,
 };
+use near_bindgen::collections::Map as NearMap;
 
-use super::{get_eth_balance, sender_as_eth};
-use super::debug;
-use super::near_native;
+use super::{ sender_as_eth};
+use crate::EvmContract;
+use near_bindgen::env;
 
-#[derive(Default)]
-pub struct FakeExt {
+pub struct FakeExt<'a> {
     pub info: EnvInfo,
     pub schedule: Schedule,
     pub selfdestruct_address: Option<Address>,
+    pub contract: &'a EvmContract,
+    pub storage: NearMap<Vec<u8>, Vec<u8>>,
+}
+
+impl<'a> FakeExt<'a> {
+    pub fn new(storage: NearMap<Vec<u8>, Vec<u8>>, contract: &'a EvmContract) -> Self {
+        Self {
+            storage,
+            contract,
+            info: Default::default(),
+            schedule: Default::default(),
+            selfdestruct_address: Default::default(),
+        }
+    }
 }
 
 fn not_implemented(name: &str) {
-    debug(format!("not implemented: {}", name).as_str());
+    env::log(format!("not implemented: {}", name).as_bytes());
 }
 
-impl vm::Ext for FakeExt {
+impl<'a> vm::Ext for FakeExt<'a> {
     /// Returns the storage value for a given key if reversion happens on the current transaction.
     fn initial_storage_at(&self, _key: &H256) -> Result<H256> {
         not_implemented("initial_storage_at");
@@ -31,32 +45,13 @@ impl vm::Ext for FakeExt {
 
     /// Returns a value for given key.
     fn storage_at(&self, key: &H256) -> Result<H256> {
-        unsafe {
-            let mut buf = [0 as u8; 32];
-            let key = key as *const H256 as *const u8;
-            let key_len = 32;
-            let _len = near_native::data_read(
-                near_native::DATA_TYPE_STORAGE,
-                key_len,
-                key,
-                32,
-                buf.as_mut_ptr(),
-            );
-            Ok(H256::from_slice(&buf[..]))
-        }
+        Ok(self.storage.get(key.0.to_vec()).map(|raw_val| H256::from_slice(&raw_val)).unwrap_or_default())
     }
 
     /// Stores a value for given key.
     fn set_storage(&mut self, key: H256, value: H256) -> Result<()> {
-        unsafe {
-            near_native::storage_write(
-                32,
-                &key as *const H256 as *const u8,
-                32,
-                &value as *const H256 as *const u8,
-            );
-            Ok(())
-        }
+        self.storage.insert(key.0.to_vec(), value.0.to_vec());
+        Ok(())
     }
 
     fn exists(&self, _address: &Address) -> Result<bool> {
@@ -75,7 +70,7 @@ impl vm::Ext for FakeExt {
     }
 
     fn balance(&self, address: &Address) -> Result<U256> {
-        Ok(get_eth_balance(*address).into())
+        Ok(self.contract.balances.get(address.0.to_vec()).unwrap().into())
     }
 
     fn blockhash(&mut self, _number: &U256) -> H256 {
@@ -160,10 +155,7 @@ impl vm::Ext for FakeExt {
 
     /// Creates log entry with given topics and data
     fn log(&mut self, _topics: Vec<H256>, data: &[u8]) -> Result<()> {
-        unsafe {
-            near_native::debug(data.len(), data.as_ptr());
-        }
-        //        not_implemented("log");
+        near_bindgen::env::log(format!("evm log: {}",hex::encode(data)).as_bytes());
         Ok(())
     }
 

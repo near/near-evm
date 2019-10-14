@@ -6,21 +6,20 @@ It uses the EVM interpreter from [parity-ethereum](https://github.com/paritytech
 
 ### Building
 
-Using `wasm-pack`:
 ```shell
-$ wasm-pack build --no-typescript --release
+$ ./build.sh
 ```
 
-This will build the contract code in `pkg/near_evm_bg.wasm`.
+This will build the contract code in `res/near_evm.wasm`.
 
 
 ### Usage
 
 1. Run a local NEAR node
-    1. `cargo run -p near -- init --test-seed seed0` to init the local node
-    1. `cargo run -p near -- --verbose run --produce-empty-blocks=false` to run the local node
+    1. checkout `nearcore`
+    1. `python scripts/start_unittest.py --local` 
 1. Build the evm contract
-    1. `wasm-pack build --no-typescript --release` - this will build the contract code in `pkg/near_evm_bg.wasm`
+    1. `./build.sh` - this will build the contract code in `res/near_evm.wasm`
 1. Run the cryptozombies integration test
     1. Remove `cdylib` from crate-type in Cargo.toml
     1. `cargo test -p near-evm --test cryptozombies_rpc test_zombie -- --exact --nocapture` - 

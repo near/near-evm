@@ -12,28 +12,35 @@ evm = { git = "https://github.com/paritytech/parity-ethereum", rev = "eed630a002
 vm = { git = "https://github.com/paritytech/parity-ethereum", rev = "eed630a002bbebed3a3097127f2483213ff52079" }
 parity-bytes = "0.1.0"
 ethereum-types = "0.6.0"
-serde = "1.0"
-serde_derive = "1.0"
-serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { git = "https://github.com/nearprotocol/json", rev = "1f5779f3b0bd3d2a4b0b975abc46f3d3fe873331", features = ["no_floats"] }
 hex = "0.3.2"
-wasm-bindgen = "0.2"
+near-bindgen = { git = "https://github.com/nearprotocol/near-bindgen", version = "0.2.5" }
+borsh = "0.2.5"
 
 [dev-dependencies]
-lazy_static = "1.3"
+lazy_static = "1.4"
 ethabi = "8.0.0"
 ethabi-contract = "8.0.0"
 ethabi-derive = "8.0.0"
 protobuf = "2.4"
-near-jsonrpc-client = { git = "https://github.com/nearprotocol/nearcore" }
-near-primitives = { git = "https://github.com/nearprotocol/nearcore" }
-near-protos = { git = "https://github.com/nearprotocol/nearcore" }
-actix = "0.8.1"
+near-jsonrpc-client = { git = "https://github.com/nearprotocol/nearcore", branch = "staging" }
+near-primitives = { git = "https://github.com/nearprotocol/nearcore", branch = "staging" }
+near-crypto = { git = "https://github.com/nearprotocol/nearcore", branch = "staging" }
+actix = "0.8.3"
 futures = "0.1.27"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [profile.release]
+codegen-units = 1
+# Tell `rustc` to optimize for small code size.
+opt-level = "z"
 lto = true
 debug = false
+panic = "abort"
 
+[features]
+default = []
+env_test = ["near-bindgen/testing"]

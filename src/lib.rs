@@ -37,10 +37,12 @@ pub struct EvmContract {
 impl EvmContract {
     pub fn deploy_code(&mut self, contract_address: String, bytecode: String) {
         let code = hex::decode(bytecode).expect("invalid hex");
-        self.code.insert(contract_address.clone().into_bytes(), code);
+        let contract_address = contract_address.into_bytes();
+        self.code.insert(&contract_address, &code);
 
-        if let Some(GasLeft::NeedsReturn { data, .. }) = self.run_command_internal(contract_address.clone(), "".to_owned()) {
-            self.code.insert(contract_address.into_bytes(), data.to_vec());
+        if let Some(GasLeft::NeedsReturn { data, .. }) = self.run_command_internal(&contract_address, "".to_string()) {
+            let data = data.to_vec();
+            self.code.insert(&contract_address, &data);
             env::log(format!("ok deployed {} bytes of code", data.len()).as_bytes());
         } else {
             panic!("init failed");
@@ -48,7 +50,8 @@ impl EvmContract {
     }
 
     pub fn run_command(&mut self, contract_address: String, encoded_input: String) -> String {
-        let result = self.run_command_internal(contract_address, encoded_input);
+        let contract_address = contract_address.into_bytes();
+        let result = self.run_command_internal(&contract_address, encoded_input);
         match result.unwrap() {
             GasLeft::NeedsReturn {
                 gas_left: _,
@@ -73,21 +76,20 @@ impl EvmContract {
     }
 
     fn run_command_internal(&mut self,
-                            contract_address: String,
+                            contract_address: &Vec<u8>,
                             encoded_input: String,
     ) -> Option<GasLeft> {
         let startgas = 1_000_000_000;
-        let contract_address = contract_address.into_bytes();
-        let storage = self.storages.get(contract_address.clone());
+        let storage = self.storages.get(contract_address);
         let storage = if let Some(storage) = storage {
             storage
         } else {
             let storage_prefix = Self::prefix_for_contract_storage(&contract_address);
             let storage = NearMap::<Vec<u8>, Vec<u8>>::new(storage_prefix);
-            self.storages.insert(contract_address.clone(), storage);
-            self.storages.get(contract_address.clone()).unwrap()
+            self.storages.insert(&contract_address, &storage);
+            storage
         };
-        let code = self.code.get(contract_address.clone()).expect("code does not exist");
+        let code = self.code.get(contract_address).expect("code does not exist");
         let input = encoded_input;
         let input = hex::decode(input).expect("invalid hex");
 

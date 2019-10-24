@@ -45,12 +45,12 @@ impl<'a> vm::Ext for FakeExt<'a> {
 
     /// Returns a value for given key.
     fn storage_at(&self, key: &H256) -> Result<H256> {
-        Ok(self.storage.get(key.0.to_vec()).map(|raw_val| H256::from_slice(&raw_val)).unwrap_or_default())
+        Ok(self.storage.get(&key.0.to_vec()).map(|raw_val| H256::from_slice(&raw_val)).unwrap_or_default())
     }
 
     /// Stores a value for given key.
     fn set_storage(&mut self, key: H256, value: H256) -> Result<()> {
-        self.storage.insert(key.0.to_vec(), value.0.to_vec());
+        self.storage.insert(&key.0.to_vec(), &value.0.to_vec());
         Ok(())
     }
 
@@ -70,7 +70,7 @@ impl<'a> vm::Ext for FakeExt<'a> {
     }
 
     fn balance(&self, address: &Address) -> Result<U256> {
-        Ok(self.contract.balances.get(address.0.to_vec()).unwrap().into())
+        Ok(self.contract.balances.get(&address.0.to_vec()).unwrap().into())
     }
 
     fn blockhash(&mut self, _number: &U256) -> H256 {

@@ -16,12 +16,13 @@ fn get_context(input: Vec<u8>) -> VMContext {
         predecessor_account_id: "carol.near".to_string(),
         input,
         block_index: 0,
+        block_timestamp: 0,
         account_balance: 0,
         storage_usage: 0,
         attached_deposit: 0,
         prepaid_gas: 10u64.pow(9),
         random_seed: vec![0, 1, 2],
-        free_of_charge: false,
+        is_view: false,
         output_data_receivers: vec![],
     }
 }
@@ -39,6 +40,7 @@ fn create_random_zombie(contract: &mut EvmContract, name: &str) {
 fn get_zombies_by_owner(contract: &mut EvmContract, owner: Address) -> Vec<Uint> {
     let (input, _decoder) = cryptozombies::functions::get_zombies_by_owner::call(owner);
     let output = contract.run_command("zombies".to_owned(), hex::encode(input));
+    let output = hex::decode(output);
     cryptozombies::functions::get_zombies_by_owner::decode_output(&output.unwrap()).unwrap()
 }
 

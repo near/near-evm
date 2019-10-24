@@ -1,7 +1,3 @@
-#[macro_use]
-extern crate ethabi_derive;
-extern crate near_evm;
-
 use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
 use near_crypto::{InMemorySigner, KeyType};

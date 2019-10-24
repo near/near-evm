@@ -1,13 +1,3 @@
-#[cfg(test)]
-extern crate alloc;
-#[cfg(test)]
-#[macro_use]
-extern crate ethabi_derive;
-extern crate ethereum_types;
-extern crate evm;
-extern crate parity_bytes;
-extern crate vm;
-
 use std::sync::Arc;
 
 use ethereum_types::{Address, U256};
@@ -20,7 +10,7 @@ use near_bindgen::{env, near_bindgen as near_bindgen_macro};
 use fake_ext::FakeExt;
 
 #[cfg(test)]
-#[cfg(env_test)]
+#[cfg(feature = "env_test")]
 mod tests;
 
 mod fake_ext;
@@ -86,7 +76,7 @@ impl EvmContract {
         } else {
             let storage_prefix = Self::prefix_for_contract_storage(&contract_address);
             let storage = NearMap::<Vec<u8>, Vec<u8>>::new(storage_prefix);
-            self.storages.insert(&contract_address, &storage);
+            self.storages.insert(contract_address, &storage);
             storage
         };
         let code = self.code.get(contract_address).expect("code does not exist");

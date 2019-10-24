@@ -1,4 +1,3 @@
-use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
 
 use near_bindgen::MockedBlockchain;
@@ -16,12 +15,13 @@ fn get_context(input: Vec<u8>) -> VMContext {
         predecessor_account_id: "carol.near".to_string(),
         input,
         block_index: 0,
+        block_timestamp: 0,
         account_balance: 0,
         storage_usage: 0,
         attached_deposit: 0,
         prepaid_gas: 10u64.pow(9),
         random_seed: vec![0, 1, 2],
-        free_of_charge: false,
+        is_view: false,
         output_data_receivers: vec![],
     }
 }

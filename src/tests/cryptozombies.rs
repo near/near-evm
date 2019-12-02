@@ -27,17 +27,17 @@ fn get_context(input: Vec<u8>) -> VMContext {
     }
 }
 
-fn deploy_cryptozombies(contract: &mut EvmContract) {
+fn deploy_cryptozombies(contract: &mut EvmContract) -> String {
     let zombie_code = include_bytes!("zombieAttack.bin").to_vec();
-    contract.deploy_code("zombies".to_owned(), String::from_utf8(zombie_code).unwrap());
+    contract.deploy_code(String::from_utf8(zombie_code).unwrap())
 }
 
-fn create_random_zombie(contract: &mut EvmContract, name: &str) {
+fn create_random_zombie(contract: &mut EvmContract, address: String, name: &str) {
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call(name.to_string());
     contract.run_command("zombies".to_owned(), hex::encode(input));
 }
 
-fn get_zombies_by_owner(contract: &mut EvmContract, owner: Address) -> Vec<Uint> {
+fn get_zombies_by_owner(contract: &mut EvmContract, address: String, owner: Address) -> Vec<Uint> {
     let (input, _decoder) = cryptozombies::functions::get_zombies_by_owner::call(owner);
     let output = contract.run_command("zombies".to_owned(), hex::encode(input));
     let output = hex::decode(output);
@@ -53,14 +53,14 @@ fn test_zombies() {
     testing_env!(context, config);
     let mut contract = EvmContract::default();
 
-    deploy_cryptozombies(&mut contract);
-    create_random_zombie(&mut contract, "zomb1");
-    create_random_zombie(&mut contract, "zomb2");
-    create_random_zombie(&mut contract, "zomb3");
+    let address = deploy_cryptozombies(&mut contract);
+    create_random_zombie(&mut contract, address.clone(), "zomb1");
+    create_random_zombie(&mut contract, address.clone(), "zomb2");
+    create_random_zombie(&mut contract, address.clone(), "zomb3");
 
-    let zombies = get_zombies_by_owner(&mut contract, sender_name_to_eth_address("owner1"));
+    let zombies = get_zombies_by_owner(&mut contract, address.clone(), sender_name_to_eth_address("owner1"));
     println!("getZombiesByOwner: {:?}", zombies);
 
-    let zombies = get_zombies_by_owner(&mut contract, sender_name_to_eth_address("owner2"));
+    let zombies = get_zombies_by_owner(&mut contract, address, sender_name_to_eth_address("owner2"));
     println!("getZombiesByOwner: {:?}", zombies);
 }

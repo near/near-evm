@@ -1,11 +1,7 @@
-use ethabi_contract::use_contract;
-
+use near_bindgen::{Config, testing_env, VMContext};
 use near_bindgen::MockedBlockchain;
-use near_bindgen::{testing_env, Config, VMContext};
-use crate::EvmContract;
-use crate::sender_name_to_eth_address;
 
-use_contract!(cryptokitties, "src/tests/kittyCore.abi");
+use crate::EvmContract;
 
 fn get_context(input: Vec<u8>) -> VMContext {
     VMContext {
@@ -26,24 +22,17 @@ fn get_context(input: Vec<u8>) -> VMContext {
     }
 }
 
-fn deploy_cryptokitties(contract: &mut EvmContract) -> String {
-    let kitty_code = include_bytes!("kittyCore.bin").to_vec();
-    contract.deploy_code(String::from_utf8(kitty_code).unwrap())
-}
-
-fn create_promo_kitty(contract: &mut EvmContract, address: String) {
-    let (input, _decoder) =
-        cryptokitties::functions::create_promo_kitty::call(0, sender_name_to_eth_address("cat"));
-    contract.run_command(address, hex::encode(input));
+fn deploy_migrations(contract: &mut EvmContract) -> String {
+    let code = include_bytes!("migrations.bin").to_vec();
+    contract.deploy_code(String::from_utf8(code).unwrap())
 }
 
 #[test]
-fn test_kitties() {
+fn test_truffle() {
     let config = Config::default();
     let mut context = get_context(vec![]);
     context.signer_account_id = "owner1".to_owned();
     testing_env!(context, config);
     let mut contract = EvmContract::default();
-    let address = deploy_cryptokitties(&mut contract);
-    create_promo_kitty(&mut contract, address);
+    let _ = deploy_migrations(&mut contract);
 }

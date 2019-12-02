@@ -1,3 +1,6 @@
 .idea/
 target/
 res/
+node_modules/
+neardev/
+build/

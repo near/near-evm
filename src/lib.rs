@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
-use ethereum_types::{Address, U256};
+use borsh::{BorshDeserialize, BorshSerialize};
+use ethereum_types::{Address, H160, U256};
 use evm::Factory;
+use near_bindgen::{env, near_bindgen as near_bindgen_macro};
 use near_bindgen::collections::Map as NearMap;
 use vm::{ActionParams, CallType, Ext, GasLeft, Schedule};
-use borsh::{BorshSerialize, BorshDeserialize};
-use near_bindgen::{env, near_bindgen as near_bindgen_macro};
 
-use fake_ext::FakeExt;
+use crate::fake_ext::FakeExt;
+use keccak_hash::keccak;
 
 #[cfg(test)]
 #[cfg(feature = "env_test")]
@@ -23,25 +24,41 @@ pub struct EvmContract {
     storages: NearMap<Vec<u8>, NearMap<Vec<u8>, Vec<u8>>>,
 }
 
+fn hash_to_h160(hash: U256) -> H160 {
+    let mut result = H160([0; 20]);
+    result.0.copy_from_slice(&(hash.0).0[..20]);
+    result
+}
+
 #[near_bindgen_macro]
 impl EvmContract {
-    pub fn deploy_code(&mut self, contract_address: String, bytecode: String) {
+    pub fn deploy_code(&mut self, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
-        let contract_address = contract_address.into_bytes();
-        self.code.insert(&contract_address, &code);
+        let contract_address = hash_to_h160(keccak(&code));
+        self.code.insert(&contract_address.0.to_vec(), &code);
 
-        if let Some(GasLeft::NeedsReturn { data, .. }) = self.run_command_internal(&contract_address, "".to_string()) {
+        if let Some(GasLeft::NeedsReturn { data, .. }) = self.run_command_internal(sender_as_eth(), &contract_address.0, "".to_string()) {
             let data = data.to_vec();
-            self.code.insert(&contract_address, &data);
+            self.code.insert(&contract_address.0.to_vec(), &data);
             env::log(format!("ok deployed {} bytes of code", data.len()).as_bytes());
+            hex::encode(contract_address)
         } else {
             panic!("init failed");
         }
     }
 
+    pub fn view_call(&mut self, contract_address: String, encoded_input: String) -> String {
+        let contract_address = contract_address.into_bytes();
+        let result = self.run_command_internal(H160([0; 20]), &contract_address, encoded_input);
+        match result.unwrap() {
+            GasLeft::NeedsReturn {data, ..} => hex::encode(data.to_vec()),
+            GasLeft::Known(_) => "".to_owned(),
+        }
+    }
+
     pub fn run_command(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = contract_address.into_bytes();
-        let result = self.run_command_internal(&contract_address, encoded_input);
+        let result = self.run_command_internal(sender_as_eth(), &contract_address, encoded_input);
         match result.unwrap() {
             GasLeft::NeedsReturn {
                 gas_left: _,
@@ -66,20 +83,22 @@ impl EvmContract {
     }
 
     fn run_command_internal(&mut self,
-                            contract_address: &Vec<u8>,
+                            sender: Address,
+                            contract_address: &[u8],
                             encoded_input: String,
     ) -> Option<GasLeft> {
         let startgas = 1_000_000_000;
-        let storage = self.storages.get(contract_address);
+        let key = contract_address.to_vec();
+        let storage = self.storages.get(&key);
         let storage = if let Some(storage) = storage {
             storage
         } else {
             let storage_prefix = Self::prefix_for_contract_storage(&contract_address);
             let storage = NearMap::<Vec<u8>, Vec<u8>>::new(storage_prefix);
-            self.storages.insert(contract_address, &storage);
+            self.storages.insert(&key, &storage);
             storage
         };
-        let code = self.code.get(contract_address).expect("code does not exist");
+        let code = self.code.get(&key).expect("code does not exist");
         let input = encoded_input;
         let input = hex::decode(input).expect("invalid hex");
 
@@ -87,7 +106,7 @@ impl EvmContract {
 
         params.call_type = CallType::None;
         params.code = Some(Arc::new(code));
-        params.sender = sender_as_eth();
+        params.sender = sender;
         params.origin = params.sender;
         params.gas = U256::from(startgas);
         params.data = Some(input);

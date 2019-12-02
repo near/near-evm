@@ -34,12 +34,12 @@ fn deploy_cryptozombies(contract: &mut EvmContract) -> String {
 
 fn create_random_zombie(contract: &mut EvmContract, address: String, name: &str) {
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call(name.to_string());
-    contract.run_command("zombies".to_owned(), hex::encode(input));
+    contract.run_command(address, hex::encode(input));
 }
 
 fn get_zombies_by_owner(contract: &mut EvmContract, address: String, owner: Address) -> Vec<Uint> {
     let (input, _decoder) = cryptozombies::functions::get_zombies_by_owner::call(owner);
-    let output = contract.run_command("zombies".to_owned(), hex::encode(input));
+    let output = contract.run_command(address, hex::encode(input));
     let output = hex::decode(output);
     cryptozombies::functions::get_zombies_by_owner::decode_output(&output.unwrap()).unwrap()
 }

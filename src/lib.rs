@@ -3,12 +3,12 @@ use std::sync::Arc;
 use borsh::{BorshDeserialize, BorshSerialize};
 use ethereum_types::{Address, H160, U256};
 use evm::Factory;
+use keccak_hash::{H256, keccak};
 use near_bindgen::{env, near_bindgen as near_bindgen_macro};
 use near_bindgen::collections::Map as NearMap;
 use vm::{ActionParams, CallType, Ext, GasLeft, Schedule};
 
 use crate::fake_ext::FakeExt;
-use keccak_hash::keccak;
 
 #[cfg(test)]
 #[cfg(feature = "env_test")]
@@ -24,9 +24,9 @@ pub struct EvmContract {
     storages: NearMap<Vec<u8>, NearMap<Vec<u8>, Vec<u8>>>,
 }
 
-fn hash_to_h160(hash: U256) -> H160 {
+fn hash_to_h160(hash: H256) -> H160 {
     let mut result = H160([0; 20]);
-    result.0.copy_from_slice(&(hash.0).0[..20]);
+    result.0.copy_from_slice(&hash.0[..20]);
     result
 }
 
@@ -48,7 +48,7 @@ impl EvmContract {
     }
 
     pub fn view_call(&mut self, contract_address: String, encoded_input: String) -> String {
-        let contract_address = contract_address.into_bytes();
+        let contract_address = hex::decode(contract_address).expect("Failed to decode hex of contract address");
         let result = self.run_command_internal(H160([0; 20]), &contract_address, encoded_input);
         match result.unwrap() {
             GasLeft::NeedsReturn {data, ..} => hex::encode(data.to_vec()),
@@ -57,7 +57,7 @@ impl EvmContract {
     }
 
     pub fn run_command(&mut self, contract_address: String, encoded_input: String) -> String {
-        let contract_address = contract_address.into_bytes();
+        let contract_address = hex::decode(contract_address).expect("Failed to decode hex of contract address");
         let result = self.run_command_internal(sender_as_eth(), &contract_address, encoded_input);
         match result.unwrap() {
             GasLeft::NeedsReturn {

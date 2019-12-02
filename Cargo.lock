@@ -1298,6 +1298,7 @@ dependencies = [
  "evm 0.1.0 (git+https://github.com/paritytech/parity-ethereum?rev=eed630a002bbebed3a3097127f2483213ff52079)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "keccak-hash 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "near-bindgen 0.3.1 (git+https://github.com/nearprotocol/near-bindgen)",
  "near-crypto 0.1.0 (git+https://github.com/nearprotocol/nearcore?branch=staging)",

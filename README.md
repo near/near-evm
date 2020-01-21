@@ -55,6 +55,6 @@ near deploy --accountId=evm --wasmFile=res/near_evm.wasm
 1. Build the evm contract
     1. `./build.sh` - this will build the contract code in `res/near_evm.wasm`
 1. Run the all tests including integration test
-    1. `cargo test --features env_test -- --nocapture` -
+    1. `cargo test -- --nocapture` -
     this will deploy the evm contract, then deploy cryptozombies and run some functions.
 

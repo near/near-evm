@@ -10,7 +10,6 @@ use near_bindgen::{env, near_bindgen as near_bindgen_macro};
 use fake_ext::FakeExt;
 
 #[cfg(test)]
-#[cfg(feature = "env_test")]
 mod tests;
 
 mod fake_ext;
@@ -76,7 +75,6 @@ impl EvmContract {
         } else {
             let storage_prefix = Self::prefix_for_contract_storage(&contract_address);
             let storage = NearMap::<Vec<u8>, Vec<u8>>::new(storage_prefix);
-            self.storages.insert(contract_address, &storage);
             storage
         };
         let code = self.code.get(contract_address).expect("code does not exist");
@@ -100,6 +98,8 @@ impl EvmContract {
         let instance = Factory::default().create(params, ext.schedule(), ext.depth());
 
         let result = instance.exec(&mut ext);
+        let FakeExt{ storage, ..} = ext;
+        self.storages.insert(contract_address, &storage);
         result.ok().unwrap().ok()
     }
 }

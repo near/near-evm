@@ -3,9 +3,9 @@ use std::sync::{Arc};
 
 use actix::System;
 use borsh::ser::BorshSerialize;
-use futures::Future;
+use futures::{Future, TryFutureExt, FutureExt};
 use near_crypto::{PublicKey, Signer};
-use near_jsonrpc_client::{BlockId, new_client};
+use near_jsonrpc_client::{ new_client};
 use near_jsonrpc_client::JsonRpcClient;
 use near_primitives::account::AccessKey;
 use near_primitives::hash::CryptoHash;
@@ -16,9 +16,12 @@ use near_primitives::transaction::{
     DeployContractAction, ExecutionOutcome, FunctionCallAction, SignedTransaction, StakeAction,
     TransferAction,
 };
-use near_primitives::types::{AccountId, Balance, Gas, MerkleHash};
-use near_primitives::views::{AccessKeyView, AccountView, BlockView, QueryResponse, StatusResponse, ViewStateResult};
+use near_primitives::types::{AccountId, Balance, Gas, MerkleHash, BlockHeight, MaybeBlockId, BlockId};
+use near_primitives::views::{AccessKeyView, AccountView, BlockView, QueryResponse, StatusResponse, ViewStateResult, ExecutionErrorView, EpochValidatorInfo};
 use near_primitives::views::{ExecutionOutcomeView, FinalExecutionOutcomeView};
+use std::thread;
+use futures::future::LocalBoxFuture;
+use std::time::Duration;
 
 pub trait User {
     fn view_account(&self, account_id: &AccountId) -> Result<AccountView, String>;
@@ -39,16 +42,15 @@ pub trait User {
     fn add_receipt(&self, receipt: Receipt) -> Result<(), String>;
 
     fn get_access_key_nonce_for_signer(&self, account_id: &AccountId) -> Result<u64, String> {
-        self.get_access_key(account_id, &self.signer().public_key()).and_then(|access_key| {
-            access_key.ok_or_else(|| "Access key doesn't exist".to_string()).map(|a| a.nonce)
-        })
+        self.get_access_key(account_id, &self.signer().public_key())
+            .map(|access_key| access_key.nonce)
     }
 
-    fn get_best_block_index(&self) -> Option<u64>;
+    fn get_best_height(&self) -> Option<BlockHeight>;
 
     fn get_best_block_hash(&self) -> Option<CryptoHash>;
 
-    fn get_block(&self, index: u64) -> Option<BlockView>;
+    fn get_block(&self, height: BlockHeight) -> Option<BlockView>;
 
     fn get_transaction_result(&self, hash: &CryptoHash) -> ExecutionOutcomeView;
 
@@ -60,7 +62,7 @@ pub trait User {
         &self,
         account_id: &AccountId,
         public_key: &PublicKey,
-    ) -> Result<Option<AccessKeyView>, String>;
+    ) -> Result<AccessKeyView, String>;
 
     fn signer(&self) -> Arc<dyn Signer>;
 
@@ -206,12 +208,12 @@ pub trait User {
         &self,
         signer_id: AccountId,
         public_key: PublicKey,
-        amount: Balance,
+        stake: Balance,
     ) -> Result<FinalExecutionOutcomeView, String> {
         self.sign_and_commit_actions(
             signer_id.clone(),
             signer_id,
-            vec![Action::Stake(StakeAction { stake: amount, public_key })],
+            vec![Action::Stake(StakeAction { stake, public_key })],
         )
     }
 }
@@ -221,90 +223,86 @@ pub trait AsyncUser: Send + Sync {
     fn view_account(
         &self,
         account_id: &AccountId,
-    ) -> Box<dyn Future<Item=AccountView, Error=String>>;
+    ) -> LocalBoxFuture<'static, Result<AccountView, String>>;
 
     fn view_balance(
         &self,
         account_id: &AccountId,
-    ) -> Box<dyn Future<Item=Balance, Error=String>> {
-        Box::new(self.view_account(account_id).map(|acc| acc.amount))
+    ) -> LocalBoxFuture<'static, Result<Balance, String>> {
+        self.view_account(account_id).map(|res| res.map(|acc| acc.amount)).boxed_local()
     }
 
     fn view_state(
         &self,
         account_id: &AccountId,
-    ) -> Box<dyn Future<Item=ViewStateResult, Error=String>>;
+    ) -> LocalBoxFuture<'static, Result<ViewStateResult, String>>;
 
     fn add_transaction(
         &self,
         transaction: SignedTransaction,
-    ) -> Box<dyn Future<Item=(), Error=String> + Send>;
+    ) -> LocalBoxFuture<'static, Result<(), String>>;
 
-    fn add_receipt(&self, receipt: Receipt) -> Box<dyn Future<Item=(), Error=String>>;
+    fn add_receipt(&self, receipt: Receipt) -> LocalBoxFuture<'static, Result<(), String>>;
 
     fn get_account_nonce(
         &self,
         account_id: &AccountId,
-    ) -> Box<dyn Future<Item=u64, Error=String>>;
+    ) -> LocalBoxFuture<'static, Result<u64, String>>;
 
-    fn get_best_block_index(&self) -> Box<dyn Future<Item=u64, Error=String>>;
+    fn get_best_height(&self) -> LocalBoxFuture<'static, Result<BlockHeight, String>>;
 
     fn get_transaction_result(
         &self,
         hash: &CryptoHash,
-    ) -> Box<dyn Future<Item=ExecutionOutcome, Error=String>>;
+    ) -> LocalBoxFuture<'static, Result<ExecutionOutcome, String>>;
 
     fn get_transaction_final_result(
         &self,
         hash: &CryptoHash,
-    ) -> Box<dyn Future<Item=FinalExecutionOutcomeView, Error=String>>;
+    ) -> LocalBoxFuture<'static, Result<FinalExecutionOutcomeView, String>>;
 
-    fn get_state_root(&self) -> Box<dyn Future<Item=MerkleHash, Error=String>>;
+    fn get_state_root(&self) -> LocalBoxFuture<'static, Result<MerkleHash, String>>;
 
     fn get_access_key(
         &self,
         account_id: &AccountId,
         public_key: &PublicKey,
-    ) -> Box<dyn Future<Item=Option<AccessKey>, Error=String>>;
+    ) -> LocalBoxFuture<'static, Result<Option<AccessKey>, String>>;
 }
 
 
 pub struct RpcUser {
+    account_id: AccountId,
     signer: Arc<dyn Signer>,
     addr: String,
 }
 
 impl RpcUser {
-    pub fn actix<F, R>(&self, f: F) -> R
+    fn actix<F, Fut, R>(&self, f: F) -> R
         where
-            R: Send + 'static,
-            F: Send + 'static,
-            F: FnOnce(JsonRpcClient) -> R,
+            Fut: Future<Output = R> + 'static,
+            F: FnOnce(JsonRpcClient) -> Fut + 'static,
     {
         let addr = self.addr.clone();
-        let thread = std::thread::spawn(move || {
-            let client = new_client(&format!("http://{}", addr));
-            let res = f(client);
-            res
-        });
-        thread.join().unwrap()
+        System::new("actix")
+            .block_on(async move { f(new_client(&format!("http://{}", addr))).await })
     }
 
-    pub fn new(addr: &str, signer: Arc<dyn Signer>) -> RpcUser {
-        RpcUser { addr: addr.to_owned(), signer }
+    pub fn new(addr: &str, account_id: AccountId, signer: Arc<dyn Signer>) -> RpcUser {
+        RpcUser { account_id, addr: addr.to_owned(), signer }
     }
 
     pub fn get_status(&self) -> Option<StatusResponse> {
-        self.actix(move |mut client| {
-            System::new("actix").block_on(futures::lazy(|| client.status()))
-        }).ok()
+        self.actix(|mut client| client.status()).ok()
     }
 
     pub fn query(&self, path: String, data: &[u8]) -> Result<QueryResponse, String> {
-        let bytes = to_base(data);
-        self.actix(move |mut client| {
-            System::new("actix").block_on(futures::lazy(|| client.query(path, bytes)))
-        })
+        let data = to_base(data);
+        self.actix(move |mut client| client.query(path, data).map_err(|err| err.to_string()))
+    }
+
+    pub fn validators(&self, block_id: MaybeBlockId) -> Result<EpochValidatorInfo, String> {
+        self.actix(move |mut client| client.validators(block_id).map_err(|err| err.to_string()))
     }
 }
 
@@ -319,9 +317,10 @@ impl User for RpcUser {
 
     fn add_transaction(&self, transaction: SignedTransaction) -> Result<(), String> {
         let bytes = transaction.try_to_vec().unwrap();
-        self.actix(move |mut client| {
-            System::new("actix").block_on(futures::lazy(|| client.broadcast_tx_async(to_base64(&bytes))))
-        }).map(drop)
+        let _ = self
+            .actix(move |mut client| client.broadcast_tx_async(to_base64(&bytes)))
+            .map_err(|err| err.to_string())?;
+        Ok(())
     }
 
     fn commit_transaction(
@@ -329,9 +328,21 @@ impl User for RpcUser {
         transaction: SignedTransaction,
     ) -> Result<FinalExecutionOutcomeView, String> {
         let bytes = transaction.try_to_vec().unwrap();
-        self.actix(move |mut client| {
-            System::new("actix").block_on(futures::lazy(|| client.broadcast_tx_commit(to_base64(&bytes))))
-        })
+        let result = self.actix(move |mut client| client.broadcast_tx_commit(to_base64(&bytes)));
+        // Wait for one more block, to make sure all nodes actually apply the state transition.
+        let height = self.get_best_height().unwrap();
+        while height == self.get_best_height().unwrap() {
+            thread::sleep(Duration::from_millis(50));
+        }
+        match result {
+            Ok(outcome) => Ok(outcome),
+            Err(err) => {
+                match serde_json::from_value::<ExecutionErrorView>(err.clone().data.unwrap()) {
+                    Ok(error_view) => Err(error_view.error_message),
+                    Err(_) => Err(serde_json::to_string(&err).unwrap()),
+                }
+            }
+        }
     }
 
     fn add_receipt(&self, _receipt: Receipt) -> Result<(), String> {
@@ -339,7 +350,7 @@ impl User for RpcUser {
         unimplemented!()
     }
 
-    fn get_best_block_index(&self) -> Option<u64> {
+    fn get_best_height(&self) -> Option<BlockHeight> {
         self.get_status().map(|status| status.sync_info.latest_block_height)
     }
 
@@ -347,24 +358,18 @@ impl User for RpcUser {
         self.get_status().map(|status| status.sync_info.latest_block_hash.into())
     }
 
-    fn get_block(&self, index: u64) -> Option<BlockView> {
-        self.actix(move |mut client| {
-            System::new("actix").block_on(futures::lazy(|| client.block(BlockId::Height(index))))
-        }).ok()
+    fn get_block(&self, height: BlockHeight) -> Option<BlockView> {
+        self.actix(move |mut client| client.block(BlockId::Height(height))).ok()
     }
 
-    fn get_transaction_result(&self, hash: &CryptoHash) -> ExecutionOutcomeView {
-        let hash = hash.clone();
-        self.actix(move |mut client| {
-            System::new("actix").block_on(futures::lazy(|| client.tx_details((&hash).into())))
-        }).unwrap()
+    fn get_transaction_result(&self, _hash: &CryptoHash) -> ExecutionOutcomeView {
+        unimplemented!()
     }
 
     fn get_transaction_final_result(&self, hash: &CryptoHash) -> FinalExecutionOutcomeView {
-        let hash = hash.clone();
-        self.actix(move |mut client| {
-            System::new("actix").block_on(futures::lazy(|| client.tx((&hash).into())))
-        }).unwrap()
+        let account_id = self.account_id.clone();
+        let hash = *hash;
+        self.actix(move |mut client| client.tx((&hash).into(), account_id)).unwrap()
     }
 
     fn get_state_root(&self) -> CryptoHash {
@@ -375,7 +380,7 @@ impl User for RpcUser {
         &self,
         account_id: &AccountId,
         public_key: &PublicKey,
-    ) -> Result<Option<AccessKeyView>, String> {
+    ) -> Result<AccessKeyView, String> {
         self.query(format!("access_key/{}/{}", account_id, public_key), &[])?.try_into()
     }
 

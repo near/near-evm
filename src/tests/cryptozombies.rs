@@ -1,8 +1,8 @@
 use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
 
-use near_bindgen::MockedBlockchain;
-use near_bindgen::{testing_env, Config, VMContext};
+use near_bindgen::{MockedBlockchain};
+use near_bindgen::{testing_env, VMContext};
 use crate::EvmContract;
 use crate::sender_name_to_eth_address;
 
@@ -18,6 +18,7 @@ fn get_context(input: Vec<u8>) -> VMContext {
         block_index: 0,
         block_timestamp: 0,
         account_balance: 0,
+        account_locked_balance: 0,
         storage_usage: 0,
         attached_deposit: 0,
         prepaid_gas: 10u64.pow(9),
@@ -47,10 +48,9 @@ fn get_zombies_by_owner(contract: &mut EvmContract, owner: Address) -> Vec<Uint>
 #[test]
 // CryptoZombies
 fn test_zombies() {
-    let config = Config::default();
     let mut context = get_context(vec![]);
     context.signer_account_id = "owner1".to_owned();
-    testing_env!(context, config);
+    testing_env!(context);
     let mut contract = EvmContract::default();
 
     deploy_cryptozombies(&mut contract);

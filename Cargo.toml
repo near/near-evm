@@ -27,6 +27,7 @@ protobuf = "2.4"
 near-jsonrpc-client = { git = "https://github.com/nearprotocol/nearcore", branch = "staging" }
 near-primitives = { git = "https://github.com/nearprotocol/nearcore", branch = "staging" }
 near-crypto = { git = "https://github.com/nearprotocol/nearcore", branch = "staging" }
+near-testlib = { git = "https://github.com/nearprotocol/nearcore", branch = "staging", package = "testlib" }
 actix = "0.9"
 futures = "0.3"
 

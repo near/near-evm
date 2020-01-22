@@ -3,12 +3,10 @@ use ethabi_contract::use_contract;
 use near_crypto::{InMemorySigner, KeyType};
 
 use near_evm::{sender_name_to_eth_address};
-use rpc_user::{RpcUser, User};
+use near_testlib::user::{rpc_user::RpcUser, User};
 use std::sync::Arc;
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::serialize::from_base64;
-
-mod rpc_user;
 
 use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 

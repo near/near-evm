@@ -15,6 +15,7 @@ use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 const CONTRACT_NAME: &str = "near_evm";
 const LOTS_OF_GAS:u64 = 1_000_000_000_000_000_000;
 
+
 fn create_account(client: &mut RpcUser, account_signer: &InMemorySigner) {
     let devnet_signer = InMemorySigner::from_seed("test.near", KeyType::ED25519, "alice.near");
     let devnet_account_id = devnet_signer.account_id.clone();
@@ -42,7 +43,13 @@ fn deploy_cryptozombies(client: &RpcUser, account_signer: &InMemorySigner) {
 fn create_random_zombie(client: &RpcUser, account_signer: &InMemorySigner, name: &str) {
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call(name.to_string());
     let input = format!("{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}", hex::encode(input));
-    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "run_command", input.into_bytes(), LOTS_OF_GAS, 0);
+    let tx_result = client.function_call(
+        account_signer.account_id.clone(),
+        CONTRACT_NAME.to_string(),
+        "run_command",
+        input.into_bytes(),
+        LOTS_OF_GAS,
+        0);
     println!("run_command(createRandomZombie): {:?}", tx_result);
 }
 
@@ -53,8 +60,15 @@ fn get_zombies_by_owner(
 ) -> Vec<Uint> {
     let (input, _decoder) = cryptozombies::functions::get_zombies_by_owner::call(owner);
     let input = format!("{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}", hex::encode(input));
-    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "run_command", input.into_bytes(), LOTS_OF_GAS, 0);
+    let tx_result = client.function_call(
+        account_signer.account_id.clone(),
+        CONTRACT_NAME.to_string(),
+        "run_command",
+        input.into_bytes(),
+        LOTS_OF_GAS,
+        0);
     println!("run_command(getZombiesByOwner): {:?}", tx_result);
+
     if let FinalExecutionStatus::SuccessValue(ref base64) = tx_result.as_ref().unwrap().status {
         let bytes = from_base64(base64).unwrap();
         assert!(bytes.len() >= 2);

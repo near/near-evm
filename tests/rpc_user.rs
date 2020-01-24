@@ -46,9 +46,9 @@ pub trait User {
             .map(|access_key| access_key.nonce)
     }
 
-    fn get_best_height(&self) -> Option<BlockHeight>;
+    fn get_best_height(&self) -> Result<BlockHeight, String>;
 
-    fn get_best_block_hash(&self) -> Option<CryptoHash>;
+    fn get_best_block_hash(&self) -> Result<CryptoHash, String>;
 
     fn get_block(&self, height: BlockHeight) -> Option<BlockView>;
 
@@ -292,8 +292,8 @@ impl RpcUser {
         RpcUser { account_id, addr: addr.to_owned(), signer }
     }
 
-    pub fn get_status(&self) -> Option<StatusResponse> {
-        self.actix(|mut client| client.status()).ok()
+    pub fn get_status(&self) -> Result<StatusResponse, String> {
+        self.actix(|mut client| client.status()).map_err(|err| err.to_string())
     }
 
     pub fn query(&self, path: String, data: &[u8]) -> Result<QueryResponse, String> {
@@ -350,12 +350,12 @@ impl User for RpcUser {
         unimplemented!()
     }
 
-    fn get_best_height(&self) -> Option<BlockHeight> {
+    fn get_best_height(&self) -> Result<BlockHeight, String> {
         self.get_status().map(|status| status.sync_info.latest_block_height)
     }
 
-    fn get_best_block_hash(&self) -> Option<CryptoHash> {
-        self.get_status().map(|status| status.sync_info.latest_block_hash.into())
+    fn get_best_block_hash(&self) -> Result<CryptoHash, String> {
+        self.get_status().map(|status| status.sync_info.latest_block_hash)
     }
 
     fn get_block(&self, height: BlockHeight) -> Option<BlockView> {
@@ -392,4 +392,3 @@ impl User for RpcUser {
         self.signer = signer;
     }
 }
-

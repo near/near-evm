@@ -32,7 +32,7 @@ impl EvmContract {
         if let Some(GasLeft::NeedsReturn { data, .. }) = self.run_command_internal(&contract_address, "".to_string()) {
             let data = data.to_vec();
             self.code.insert(&contract_address, &data);
-            env::log(format!("ok deployed {} bytes of code", data.len()).as_bytes());
+            env::log(format!("ok deployed {} bytes of code at address {}", data.len(), hex::encode(&contract_address)).as_bytes());
         } else {
             panic!("init failed");
         }

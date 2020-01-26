@@ -1,12 +1,14 @@
+use std::sync::Arc;
+
 use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
-use near_crypto::{InMemorySigner, KeyType};
 
-use near_evm::{sender_name_to_eth_address};
+use near_crypto::{InMemorySigner, KeyType};
 use near_testlib::user::{rpc_user::RpcUser, User};
-use std::sync::Arc;
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::serialize::from_base64;
+
+use near_evm::utils::{sender_name_to_eth_address};
 
 use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 
@@ -40,8 +42,8 @@ fn deploy_cryptozombies(client: &RpcUser, account_signer: &InMemorySigner) {
 fn create_random_zombie(client: &RpcUser, account_signer: &InMemorySigner, name: &str) {
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call(name.to_string());
     let input = format!("{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}", hex::encode(input));
-    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "run_command", input.into_bytes(), LOTS_OF_GAS, 0);
-    println!("run_command(createRandomZombie): {:?}", tx_result);
+    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "call_contract", input.into_bytes(), LOTS_OF_GAS, 0);
+    println!("call_contract(createRandomZombie): {:?}", tx_result);
 }
 
 fn get_zombies_by_owner(
@@ -51,8 +53,8 @@ fn get_zombies_by_owner(
 ) -> Vec<Uint> {
     let (input, _decoder) = cryptozombies::functions::get_zombies_by_owner::call(owner);
     let input = format!("{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}", hex::encode(input));
-    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "run_command", input.into_bytes(), LOTS_OF_GAS, 0);
-    println!("run_command(getZombiesByOwner): {:?}", tx_result);
+    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "call_contract", input.into_bytes(), LOTS_OF_GAS, 0);
+    println!("call_contract(getZombiesByOwner): {:?}", tx_result);
     if let FinalExecutionStatus::SuccessValue(ref base64) = tx_result.as_ref().unwrap().status {
         let bytes = from_base64(base64).unwrap();
         assert!(bytes.len() >= 2);

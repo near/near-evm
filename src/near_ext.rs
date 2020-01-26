@@ -15,9 +15,9 @@ use vm::{
     TrapKind,
 };
 
-use crate::interpreter::{sender_as_eth};
+use near_bindgen;
+use crate::utils::sender_as_eth;
 use crate::evm_state::{EvmState, SubState};
-use near_bindgen::env;
 
 
 // https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
@@ -49,7 +49,7 @@ impl<'a> NearExt<'a> {
 }
 
 fn not_implemented(name: &str) {
-    env::log(format!("not implemented: {}", name).as_bytes());
+    near_bindgen::env::log(format!("not implemented: {}", name).as_bytes());
 }
 
 impl<'a> vm::Ext for NearExt<'a> {

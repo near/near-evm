@@ -16,8 +16,8 @@ mod tests;
 
 mod near_ext;
 mod evm_state;
-mod utils;
 mod interpreter;
+pub mod utils;
 
 
 #[near_bindgen_macro]

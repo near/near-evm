@@ -2,19 +2,11 @@ use std::sync::Arc;
 
 use vm::{ActionParams, CallType, Ext, GasLeft, Schedule};
 use evm::Factory;
-use ethereum_types::{Address, U256};
-
-use near_bindgen::{env};
+use ethereum_types::{U256};
 
 use crate::near_ext::NearExt;
 use crate::evm_state::{EvmState, SubState, StateStore};
-
-pub fn sender_as_eth() -> Address {
-    let mut sender =
-        env::signer_account_id().into_bytes();
-    sender.resize(20, 0);
-    Address::from_slice(&sender)
-}
+use crate::utils::sender_as_eth;
 
 /// implements non-static calls, commits succesful updates to state
 pub fn run_and_commit_if_success(state: &mut dyn EvmState,

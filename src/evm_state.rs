@@ -111,7 +111,6 @@ impl EvmState for SubState<'_> {
     }
 
     fn set_contract_storage(&mut self, address: &Vec<u8>, key: &Vec<u8>, value: &Vec<u8>)  -> Option<Vec<u8>> {
-        println!("sub set  {:?} TO {:?}", hex::encode(key), hex::encode(value) );
         self.mut_contract_storage(address)
             .insert(key.to_vec(), value.to_vec())
     }

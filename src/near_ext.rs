@@ -15,7 +15,7 @@ use vm::{
     TrapKind,
 };
 
-use super::{ sender_as_eth};
+use crate::interpreter::{sender_as_eth};
 use crate::evm_state::{EvmState, SubState};
 use near_bindgen::env;
 
@@ -63,8 +63,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn storage_at(&self, key: &H256) -> EvmResult<H256> {
         let raw_val = self.sub_state.read_contract_storage(&self.context_addr.to_vec(), &key.0.to_vec())
             .map(|v| v.clone())
-            .unwrap_or(vec![0; 32]);
-        // println!("ext_read {:?} IS {:?}", key, hex::encode(&raw_val));
+            .unwrap_or(vec![0; 32]);  // default to an empty vec of correct length
         Ok(H256::from_slice(&raw_val))
     }
 
@@ -73,7 +72,6 @@ impl<'a> vm::Ext for NearExt<'a> {
         if self.is_static() {
             return Err(VmError::MutableCallInStaticContext)
         }
-        // println!("ext_set  {:?} TO {:?}", key, value);
         self.sub_state.set_contract_storage(
             &self.context_addr,
             &key.0.to_vec(),

@@ -6,28 +6,43 @@ use vm::{
     CallType, ContractCreateResult, CreateContractAddress, EnvInfo, MessageCallResult, Result,
     ReturnData, Schedule, TrapKind,
 };
-use near_bindgen::collections::Map as NearMap;
 
 use super::{ sender_as_eth};
 use crate::EvmContract;
+use crate::evm_state::{EvmState, SubState};
 use near_bindgen::env;
 
-pub struct FakeExt<'a> {
+
+// https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
+pub struct NearExt<'a> {
     pub info: EnvInfo,
     pub schedule: Schedule,
+    pub context_addr: Vec<u8>,
     pub selfdestruct_address: Option<Address>,
     pub contract: &'a EvmContract,
-    pub storage: NearMap<Vec<u8>, Vec<u8>>,
+    pub sub_state: &'a mut SubState<'a>,
+    pub static_flag: bool,
+    pub depth: usize,
+    pub stack_depth: usize,
 }
 
-impl<'a> FakeExt<'a> {
-    pub fn new(storage: NearMap<Vec<u8>, Vec<u8>>, contract: &'a EvmContract) -> Self {
+impl<'a> NearExt<'a> {
+    pub fn new(
+            context_addr: Vec<u8>,
+            sub_state: &'a mut SubState<'a>,
+            contract: &'a EvmContract,
+            depth: usize,
+            stack_depth: usize) -> Self {
         Self {
-            storage,
-            contract,
             info: Default::default(),
             schedule: Default::default(),
+            context_addr,
             selfdestruct_address: Default::default(),
+            contract,
+            sub_state,
+            static_flag: false,  // TODO
+            depth,
+            stack_depth
         }
     }
 }
@@ -36,7 +51,7 @@ fn not_implemented(name: &str) {
     env::log(format!("not implemented: {}", name).as_bytes());
 }
 
-impl<'a> vm::Ext for FakeExt<'a> {
+impl<'a> vm::Ext for NearExt<'a> {
     /// Returns the storage value for a given key if reversion happens on the current transaction.
     fn initial_storage_at(&self, _key: &H256) -> Result<H256> {
         not_implemented("initial_storage_at");
@@ -45,12 +60,25 @@ impl<'a> vm::Ext for FakeExt<'a> {
 
     /// Returns a value for given key.
     fn storage_at(&self, key: &H256) -> Result<H256> {
-        Ok(self.storage.get(&key.0.to_vec()).map(|raw_val| H256::from_slice(&raw_val)).unwrap_or_default())
+        let raw_val = self.sub_state.state.storages
+            .get(&self.context_addr.to_vec())
+            .map(|v| v.clone())
+            .unwrap_or_default()
+            .get(&key.0.to_vec())
+            .map(|v| v.clone())
+            .unwrap_or(vec![0; 32]);
+        println!("ext_read {:?} IS {:?}", key, hex::encode(&raw_val));
+        Ok(H256::from_slice(&raw_val))
     }
 
     /// Stores a value for given key.
     fn set_storage(&mut self, key: H256, value: H256) -> Result<()> {
-        self.storage.insert(&key.0.to_vec(), &value.0.to_vec());
+        println!("ext_set  {:?} TO {:?}", key, value);
+        self.sub_state.set_contract_storage(
+            &self.context_addr,
+            &key.0.to_vec(),
+            &value.0.to_vec()
+        );
         Ok(())
     }
 
@@ -70,7 +98,8 @@ impl<'a> vm::Ext for FakeExt<'a> {
     }
 
     fn balance(&self, address: &Address) -> Result<U256> {
-        Ok(self.contract.balances.get(&address.0.to_vec()).unwrap().into())
+        // unimplemented!()
+        Ok(self.contract.balance_of(&address.0.to_vec()).into())
     }
 
     fn blockhash(&mut self, _number: &U256) -> H256 {
@@ -190,8 +219,7 @@ impl<'a> vm::Ext for FakeExt<'a> {
     /// If contract A calls contract B, and contract B calls C,
     /// then A depth is 0, B is 1, C is 2 and so on.
     fn depth(&self) -> usize {
-        // TODO
-        0
+        self.depth
     }
 
     /// Increments sstore refunds counter.
@@ -227,7 +255,6 @@ impl<'a> vm::Ext for FakeExt<'a> {
 
     /// Check if running in static context.
     fn is_static(&self) -> bool {
-        not_implemented("is_static");
-        unimplemented!();
+        self.static_flag
     }
 }

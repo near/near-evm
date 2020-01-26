@@ -77,33 +77,25 @@ impl EvmContract {
 
         self.set_code(&contract_address, &code);
 
-        if let Some(GasLeft::NeedsReturn { data, .. }) = self.run_command_internal(&contract_address, "".to_string()) {
-            let data = data.to_vec();
-            self.set_code(&contract_address, &data);
-            env::log(format!("ok deployed {} bytes of code at address {}", data.len(), hex::encode(&contract_address)).as_bytes());
-        } else {
-            panic!("init failed");
+        let opt = self.run_command_internal(&contract_address, "".to_string());
+
+        match opt {
+            Some(data) => {
+                self.set_code(&contract_address, &data);
+                env::log(format!("ok deployed {} bytes of code at address {}", data.len(), hex::encode(&contract_address)).as_bytes());
+            }
+            None => panic!("init failed")
         }
     }
 
     pub fn run_command(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = contract_address.into_bytes();
-        println!("\n\nSTART");
+
         let result = self.run_command_internal(&contract_address, encoded_input);
 
-        println!("NAXT");
-        // move unwrapping steps here?
-        let unwrapped = result.unwrap();
-        match unwrapped {
-            GasLeft::NeedsReturn {
-                gas_left: _,
-                data,
-                apply_state: _,
-            } => {
-                println!("RET DATA {:?}", hex::encode(data.to_vec()));
-                hex::encode(data.to_vec())
-            },
-            GasLeft::Known(_gas_left) => "".to_owned()
+        match result {
+            Some(v) => hex::encode(v),
+            None => panic!("internal command returned None")
         }
     }
 }
@@ -119,19 +111,19 @@ impl EvmContract {
 
     pub fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
         for (k, v) in other.iter() {
-            // for (k2, v2) in v.iter() {
-            //     println!("COMMIT {:?} is {:?}", hex::encode(k2), hex::encode(v2));
-            // }
+            for (k2, v2) in v.iter() {
+                println!("COMMIT {:?} is {:?}", hex::encode(k2), hex::encode(v2));
+            }
             let mut storage = self.contract_storage(k);
             storage.extend(v.into_iter().map(|(k, v)| (k.clone(), v.clone())));
             self.storages.insert(k, &storage);
         }
-        // for (k, v) in self.storages.iter() {
-            // println!("DUMPING STATE");
-            // for (k2, v2) in v.iter() {
-            //     println!("STATE {:?} {:?} is {:?}", hex::encode(&k), hex::encode(k2), hex::encode(v2));
-            // }
-        // }
+        for (k, v) in self.storages.iter() {
+            println!("DUMPING STATE");
+            for (k2, v2) in v.iter() {
+                println!("STATE {:?} {:?} is {:?}", hex::encode(&k), hex::encode(k2), hex::encode(v2));
+            }
+        }
     }
 
     fn contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>>  {
@@ -146,31 +138,66 @@ impl EvmContract {
         storage
     }
 
-    fn run_command_internal(&mut self, contract_address: &Vec<u8>, encoded_input: String) -> Option<GasLeft> {
+    fn run_command_internal(&mut self, contract_address: &Vec<u8>, encoded_input: String) -> Option<Vec<u8>> {
         // decode
         let input = encoded_input;
         let input = hex::decode(input).expect("invalid hex");
 
         // run
-        let (result, state_updates) = run_against_state(
+        let result = run_and_commit_if_success(
             self,
             contract_address.to_vec(),
             contract_address.to_vec(),
             input);
-        println!("RESULT IS {:?}", result);
 
-        // TODO: commit only if result is good
-        //       return properly
-        self.commit_changes(&state_updates.unwrap());
-        result
+        match result {
+            Some(GasLeft::Known(_)) => {  // No returndata
+                Some(vec![])
+            },
+            Some(GasLeft::NeedsReturn{   // NB: EVM handles this separately because returning data costs variable gas
+                gas_left: _,
+                data,
+                apply_state: _,
+            }) => {
+                Some(data.to_vec())
+            },
+            None => None
+        }
     }
+}
+
+fn run_and_commit_if_success(state: &mut dyn EvmState,
+                             state_address: Vec<u8>,
+                             code_address: Vec<u8>,
+                             input: Vec<u8>) -> Option<GasLeft> {
+        let (result, state_updates) = run_against_state(
+            state,
+            state_address,
+            code_address,
+            input);
+        match result {
+            Some(GasLeft::Known(_)) => {
+                state.commit_changes(&state_updates.unwrap());
+                result
+            },
+            Some(GasLeft::NeedsReturn{
+                gas_left: _,
+                data: _,
+                apply_state,
+            }) => {
+                if apply_state {
+                    state.commit_changes(&state_updates.unwrap());
+                }
+                result
+            },
+            None => None
+        }
 }
 
 fn run_against_state(state: &dyn EvmState,
                      state_address: Vec<u8>,
                      code_address: Vec<u8>,
-                     input: Vec<u8>,
-) -> (Option<GasLeft>, Option<StateStore>) {
+                     input: Vec<u8>) -> (Option<GasLeft>, Option<StateStore>) {
     let startgas = 1_000_000_000;
     let code = state.code_at(&code_address).expect("code does not exist");
 

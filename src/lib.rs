@@ -92,8 +92,8 @@ impl EvmContract {
         let result = self.run_command_internal(&contract_address, encoded_input);
 
         println!("NAXT");
+        // move unwrapping steps here?
         let unwrapped = result.unwrap();
-        println!("THARD");
         match unwrapped {
             GasLeft::NeedsReturn {
                 gas_left: _,
@@ -153,15 +153,14 @@ impl EvmContract {
 
         // run
         let (result, state_updates) = self.run_against_state(
-            &contract_address,
-            &contract_address,
-            &input);
+            contract_address.to_vec(),
+            contract_address.to_vec(),
+            input);
         println!("RESULT IS {:?}", result);
 
         // TODO: commit only if result is good
         //       return properly
         self.commit_changes(&state_updates.unwrap());
-        println!("new balance shoes {:?}", self.balance_of(contract_address));
         println!(
             "new storage {:?}",
             self.read_contract_storage(
@@ -173,17 +172,15 @@ impl EvmContract {
     }
 
     fn run_against_state(&self,
-                         state_address: &Vec<u8>,
-                         code_address: &Vec<u8>,
-                         input: &Vec<u8>,
+                         state_address: Vec<u8>,
+                         code_address: Vec<u8>,
+                         input: Vec<u8>,
     ) -> (Option<GasLeft>, Option<StateStore>) {
+        let startgas = 1_000_000_000;
+        let code = self.code_at(&code_address).expect("code does not exist");
 
         let mut store = StateStore::default();
         let mut sub_state = SubState::new(&mut store, self);
-
-        let code = sub_state.code_at(code_address).expect("code does not exist");
-
-        println!("contract of {:?} bytes", code.len());
 
         let mut params = ActionParams::default();
 
@@ -191,11 +188,11 @@ impl EvmContract {
         params.code = Some(Arc::new(code));
         params.sender = sender_as_eth();
         params.origin = params.sender;
-        params.gas = U256::from(1_000_000_000);
+        params.gas = U256::from(startgas);
         params.data = Some(input.to_vec());
 
         let mut ext = NearExt::new(state_address.to_vec(), &mut sub_state, self, 0, 0);
-        ext.info.gas_limit = U256::from(1_000_000_000);
+        ext.info.gas_limit = U256::from(startgas);
         ext.schedule = Schedule::new_constantinople();
 
         let instance = Factory::default().create(params, ext.schedule(), ext.depth());

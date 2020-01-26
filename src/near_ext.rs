@@ -60,11 +60,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Returns a value for given key.
     fn storage_at(&self, key: &H256) -> Result<H256> {
-        let raw_val = self.sub_state.state.storages
-            .get(&self.context_addr.to_vec())
-            .map(|v| v.clone())
-            .unwrap_or_default()
-            .get(&key.0.to_vec())
+        let raw_val = self.sub_state.read_contract_storage(&self.context_addr.to_vec(), &key.0.to_vec())
             .map(|v| v.clone())
             .unwrap_or(vec![0; 32]);
         println!("ext_read {:?} IS {:?}", key, hex::encode(&raw_val));

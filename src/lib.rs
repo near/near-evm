@@ -119,19 +119,19 @@ impl EvmContract {
 
     pub fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
         for (k, v) in other.iter() {
-            for (k2, v2) in v.iter() {
-                println!("COMMIT {:?} is {:?}", hex::encode(k2), hex::encode(v2));
-            }
+            // for (k2, v2) in v.iter() {
+            //     println!("COMMIT {:?} is {:?}", hex::encode(k2), hex::encode(v2));
+            // }
             let mut storage = self.contract_storage(k);
             storage.extend(v.into_iter().map(|(k, v)| (k.clone(), v.clone())));
             self.storages.insert(k, &storage);
         }
-        for (k, v) in self.storages.iter() {
-            println!("DUMPING STATE");
-            for (k2, v2) in v.iter() {
-                println!("STATE {:?} {:?} is {:?}", hex::encode(&k), hex::encode(k2), hex::encode(v2));
-            }
-        }
+        // for (k, v) in self.storages.iter() {
+            // println!("DUMPING STATE");
+            // for (k2, v2) in v.iter() {
+            //     println!("STATE {:?} {:?} is {:?}", hex::encode(&k), hex::encode(k2), hex::encode(v2));
+            // }
+        // }
     }
 
     fn contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>>  {
@@ -152,7 +152,8 @@ impl EvmContract {
         let input = hex::decode(input).expect("invalid hex");
 
         // run
-        let (result, state_updates) = self.run_against_state(
+        let (result, state_updates) = run_against_state(
+            self,
             contract_address.to_vec(),
             contract_address.to_vec(),
             input);
@@ -161,73 +162,40 @@ impl EvmContract {
         // TODO: commit only if result is good
         //       return properly
         self.commit_changes(&state_updates.unwrap());
-        println!(
-            "new storage {:?}",
-            self.read_contract_storage(
-                contract_address,
-                &hex::decode("b9d38c3fd8a7d9c75ec9c730df6f3da77bd5dacce98f82cfebee48889fc7f80d").ok().unwrap()
-            ));
-        println!("RETURNING");
         result
     }
-
-    fn run_against_state(&self,
-                         state_address: Vec<u8>,
-                         code_address: Vec<u8>,
-                         input: Vec<u8>,
-    ) -> (Option<GasLeft>, Option<StateStore>) {
-        let startgas = 1_000_000_000;
-        let code = self.code_at(&code_address).expect("code does not exist");
-
-        let mut store = StateStore::default();
-        let mut sub_state = SubState::new(&mut store, self);
-
-        let mut params = ActionParams::default();
-
-        params.call_type = CallType::None;
-        params.code = Some(Arc::new(code));
-        params.sender = sender_as_eth();
-        params.origin = params.sender;
-        params.gas = U256::from(startgas);
-        params.data = Some(input.to_vec());
-
-        let mut ext = NearExt::new(state_address.to_vec(), &mut sub_state, self, 0, 0);
-        ext.info.gas_limit = U256::from(startgas);
-        ext.schedule = Schedule::new_constantinople();
-
-        let instance = Factory::default().create(params, ext.schedule(), ext.depth());
-
-        // Run the code
-        let result = instance.exec(&mut ext);
-
-        // println!(
-        //     "sub new storage {:?}",
-        //     sub_state.read_contract_storage(
-        //         state_address,
-        //         &hex::decode("b9d38c3fd8a7d9c75ec9c730df6f3da77bd5dacce98f82cfebee48889fc7f80d").ok().unwrap()
-        //     ));
-
-        print_storages(&"intermediate".to_string(), &store);
-
-        let okayed = result.ok();
-        println!("okayed {:?}", &okayed);
-        (okayed.unwrap().ok(), Some(store))
-        // (result.ok().unwrap().ok(), Some(store))
-    }
 }
 
-fn print_storages(prefix: &String, store: &StateStore) {
-    let storages = &store.storages;
-    for (k, v) in storages.into_iter() {
-        println!("{:?}", hex::encode(&k));
-        print_storage(prefix, v)
-    }
-}
+fn run_against_state(state: &dyn EvmState,
+                     state_address: Vec<u8>,
+                     code_address: Vec<u8>,
+                     input: Vec<u8>,
+) -> (Option<GasLeft>, Option<StateStore>) {
+    let startgas = 1_000_000_000;
+    let code = state.code_at(&code_address).expect("code does not exist");
 
-fn print_storage(prefix: &String, storage: &HashMap<Vec<u8>, Vec<u8>>) {
-    for (k, v) in storage.into_iter() {
-        println!("{} {:?} is {:?}", prefix, hex::encode(k), hex::encode(v));
-    }
+    let mut store = StateStore::default();
+    let mut sub_state = SubState::new(&mut store, state);
+
+    let mut params = ActionParams::default();
+
+    params.call_type = CallType::None;
+    params.code = Some(Arc::new(code));
+    params.sender = sender_as_eth();
+    params.origin = params.sender;
+    params.gas = U256::from(startgas);
+    params.data = Some(input.to_vec());
+
+    let mut ext = NearExt::new(state_address.to_vec(), &mut sub_state, 0);
+    ext.info.gas_limit = U256::from(startgas);
+    ext.schedule = Schedule::new_constantinople();
+
+    let instance = Factory::default().create(params, ext.schedule(), ext.depth());
+
+    // Run the code
+    let result = instance.exec(&mut ext);
+
+    (result.ok().unwrap().ok(), Some(store))
 }
 
 fn sender_as_eth() -> Address {

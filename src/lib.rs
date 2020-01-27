@@ -9,7 +9,6 @@ use near_bindgen::{env, near_bindgen as near_bindgen_macro};
 
 use crate::evm_state::{EvmState, StateStore};
 use crate::utils::{prefix_for_contract_storage};
-use crate::interpreter::{run_and_commit_if_success};
 
 #[cfg(test)]
 mod tests;
@@ -74,7 +73,7 @@ impl EvmContract {
 
         self.set_code(&contract_address, &code);
 
-        let opt = self.run_command_internal(&contract_address, "".to_string());
+        let opt = self.call_contract_internal(&contract_address, "".to_string());
 
         match opt {
             Some(data) => {
@@ -88,7 +87,7 @@ impl EvmContract {
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = contract_address.into_bytes();
 
-        let result = self.run_command_internal(&contract_address, encoded_input);
+        let result = self.call_contract_internal(&contract_address, encoded_input);
 
         match result {
             Some(v) => hex::encode(v),
@@ -126,17 +125,20 @@ impl EvmContract {
         storage
     }
 
-    fn run_command_internal(&mut self, contract_address: &Vec<u8>, encoded_input: String) -> Option<Vec<u8>> {
+    fn call_contract_internal(
+            &mut self,
+            contract_address: &Vec<u8>,
+            encoded_input: String) -> Option<Vec<u8>> {
         // decode
         let input = encoded_input;
         let input = hex::decode(input).expect("invalid hex");
 
         // run
-        let result = run_and_commit_if_success(
+        let result = interpreter::call(
             self,
-            contract_address.to_vec(),
-            contract_address.to_vec(),
-            input);
+            0, // call-stack depth
+            contract_address,
+            &input);
 
         match result {
             Some(GasLeft::Known(_)) => {  // No returndata

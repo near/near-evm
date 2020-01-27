@@ -8,6 +8,7 @@ use vm::{
     ContractCreateResult,
     CreateContractAddress,
     EnvInfo,
+    GasLeft,
     MessageCallResult,
     Result as EvmResult,
     ReturnData,
@@ -16,9 +17,9 @@ use vm::{
 };
 
 use near_bindgen;
-use crate::utils::sender_as_eth;
+use crate::utils;
+use crate::interpreter;
 use crate::evm_state::{EvmState, SubState};
-
 
 // https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
 pub struct NearExt<'a> {
@@ -35,14 +36,16 @@ impl<'a> NearExt<'a> {
     pub fn new(
             context_addr: Vec<u8>,
             sub_state: &'a mut SubState<'a>,
-            depth: usize) -> Self {
+            depth: usize,
+            static_flag:bool
+        ) -> Self {
         Self {
             info: Default::default(),
             schedule: Default::default(),
             context_addr,
             selfdestruct_address: Default::default(),
             sub_state,
-            static_flag: false,  // TODO
+            static_flag,
             depth,
         }
     }
@@ -92,7 +95,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     // TODO: sender vs origin
     fn origin_balance(&self) -> EvmResult<U256> {
-        self.balance(&sender_as_eth())
+        self.balance(&utils::sender_as_eth())
     }
 
     fn balance(&self, address: &Address) -> EvmResult<U256> {
@@ -112,6 +115,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         _address: CreateContractAddress,
         _trap: bool,
     ) -> Result<ContractCreateResult, TrapKind> {
+        // https://github.com/paritytech/parity-ethereum/blob/master/ethcore/vm/src/ext.rs#L57-L64
         not_implemented("create");
         unimplemented!()
     }
@@ -125,45 +129,77 @@ impl<'a> vm::Ext for NearExt<'a> {
         &mut self,
         _gas: &U256,
         _sender_address: &Address,
-        _receive_address: &Address,
+        receive_address: &Address,
         _value: Option<U256>,
-        _data: &[u8],
-        _code_address: &Address,
+        data: &[u8],
+        code_address: &Address,
         call_type: CallType,
         _trap: bool,
     ) -> Result<MessageCallResult, TrapKind> {
-        match call_type {
+        let opt_gas_left = match call_type {
             CallType::None => {
+                // Can stay unimplemented
                 not_implemented("CallType=None");
                 unimplemented!()
             }
             CallType::Call => {
-                not_implemented("Call");
-                unimplemented!()
+                interpreter::call(
+                    self.sub_state,
+                    self.depth,
+                    &receive_address[..].to_vec(),
+                    &data.to_vec()
+                )
             }
             CallType::StaticCall => {
-                // identical to call but do not allow state modifications
-                not_implemented("StaticCall");
-                unimplemented!()
+                interpreter::static_call(
+                    self.sub_state,
+                    self.depth,
+                    &receive_address[..].to_vec(),
+                    &data.to_vec()
+                )
             }
             CallType::CallCode => {
                 // Call another contract using storage of the current contract
-                // Should leave unimplemented
+                // Can leave unimplemented, no longer used.
                 not_implemented("CallCode");
                 unimplemented!()
             }
             CallType::DelegateCall => {
-                // identical to callcode but also keep caller and callvalue
-                not_implemented("DelegateCall");
-                unimplemented!()
+                interpreter::delegate_call(
+                    self.sub_state,
+                    self.depth,
+                    &receive_address[..].to_vec(),
+                    &code_address[..].to_vec(),
+                    &data.to_vec()
+                )
             }
-        }
+        };
+
+        // GasLeft into MessageCallResult
+        let res = match opt_gas_left {
+            Some(GasLeft::Known(gas_left)) => {
+                vm::MessageCallResult::Success(gas_left, ReturnData::empty())
+            },
+            Some(GasLeft::NeedsReturn{
+                gas_left, data, apply_state: true
+            }) => {
+                vm::MessageCallResult::Success(gas_left, data)
+            },
+            Some(GasLeft::NeedsReturn{
+                gas_left, data, apply_state: false
+            }) => {
+                vm::MessageCallResult::Reverted(gas_left, data)
+            },
+            _ => vm::MessageCallResult::Failed,
+        };
+
+        Ok(res) // Even failed is Ok. Err() is for resume traps
     }
 
     /// Returns code at given address
-    fn extcode(&self, _address: &Address) -> EvmResult<Option<Arc<Bytes>>> {
-        not_implemented("extcode");
-        unimplemented!()
+    fn extcode(&self, address: &Address) -> EvmResult<Option<Arc<Bytes>>> {
+        let code = self.sub_state.code_at(&address.0.to_vec()).map(|c| Arc::new(c));
+        Ok(code)
     }
 
     /// Returns code hash at given address
@@ -175,9 +211,8 @@ impl<'a> vm::Ext for NearExt<'a> {
     }
 
     /// Returns code size at given address
-    fn extcodesize(&self, _address: &Address) -> EvmResult<Option<usize>> {
-        not_implemented("extcodesize");
-        unimplemented!()
+    fn extcodesize(&self, address: &Address) -> EvmResult<Option<usize>> {
+        Ok(self.sub_state.code_at(&address.0.to_vec()).map(|c| c.len()))
     }
 
     /// Creates log entry with given topics and data
@@ -192,15 +227,17 @@ impl<'a> vm::Ext for NearExt<'a> {
     /// Should be called when transaction calls `RETURN` opcode.
     /// Returns gas_left if cost of returning the data is not too high.
     fn ret(self, _gas: &U256, _data: &ReturnData, _apply_state: bool) -> EvmResult<U256> {
-        not_implemented("ret");
         // NOTE: this is only called through finalize(), but we are not using it
         // so it should be safe to ignore it here
+        not_implemented("ret");
         unimplemented!()
     }
 
     /// Should be called when contract commits suicide.
     /// Address to which funds should be refunded.
     fn suicide(&mut self, _refund_address: &Address) -> EvmResult<()> {
+        // TODO: implement.
+        //       Does suicide delete or preserve storage (delete I think?)
         not_implemented("suicide");
         unimplemented!()
     }

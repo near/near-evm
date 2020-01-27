@@ -3,23 +3,14 @@ use std::sync::Arc;
 use ethereum_types::{Address, H256, U256};
 use parity_bytes::Bytes;
 use vm::{
-    Error as VmError,
-    CallType,
-    ContractCreateResult,
-    CreateContractAddress,
-    EnvInfo,
-    GasLeft,
-    MessageCallResult,
-    Result as EvmResult,
-    ReturnData,
-    Schedule,
-    TrapKind,
+    CallType, ContractCreateResult, CreateContractAddress, EnvInfo, Error as VmError, GasLeft,
+    MessageCallResult, Result as EvmResult, ReturnData, Schedule, TrapKind,
 };
 
-use near_bindgen;
-use crate::utils;
-use crate::interpreter;
 use crate::evm_state::{EvmState, SubState};
+use crate::interpreter;
+use crate::utils;
+use near_bindgen;
 
 // https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
 pub struct NearExt<'a> {
@@ -34,11 +25,11 @@ pub struct NearExt<'a> {
 
 impl<'a> NearExt<'a> {
     pub fn new(
-            context_addr: Vec<u8>,
-            sub_state: &'a mut SubState<'a>,
-            depth: usize,
-            static_flag:bool
-        ) -> Self {
+        context_addr: Vec<u8>,
+        sub_state: &'a mut SubState<'a>,
+        depth: usize,
+        static_flag: bool,
+    ) -> Self {
         Self {
             info: Default::default(),
             schedule: Default::default(),
@@ -64,22 +55,21 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Returns a value for given key.
     fn storage_at(&self, key: &H256) -> EvmResult<H256> {
-        let raw_val = self.sub_state.read_contract_storage(&self.context_addr.to_vec(), &key.0.to_vec())
+        let raw_val = self
+            .sub_state
+            .read_contract_storage(&self.context_addr.to_vec(), &key.0.to_vec())
             .map(|v| v.clone())
-            .unwrap_or(vec![0; 32]);  // default to an empty vec of correct length
+            .unwrap_or(vec![0; 32]); // default to an empty vec of correct length
         Ok(H256::from_slice(&raw_val))
     }
 
     /// Stores a value for given key.
     fn set_storage(&mut self, key: H256, value: H256) -> EvmResult<()> {
         if self.is_static() {
-            return Err(VmError::MutableCallInStaticContext)
+            return Err(VmError::MutableCallInStaticContext);
         }
-        self.sub_state.set_contract_storage(
-            &self.context_addr,
-            &key.0.to_vec(),
-            &value.0.to_vec()
-        );
+        self.sub_state
+            .set_contract_storage(&self.context_addr, &key.0.to_vec(), &value.0.to_vec());
         Ok(())
     }
 
@@ -142,54 +132,48 @@ impl<'a> vm::Ext for NearExt<'a> {
                 not_implemented("CallType=None");
                 unimplemented!()
             }
-            CallType::Call => {
-                interpreter::call(
-                    self.sub_state,
-                    self.depth,
-                    &receive_address[..].to_vec(),
-                    &data.to_vec()
-                )
-            }
-            CallType::StaticCall => {
-                interpreter::static_call(
-                    self.sub_state,
-                    self.depth,
-                    &receive_address[..].to_vec(),
-                    &data.to_vec()
-                )
-            }
+            CallType::Call => interpreter::call(
+                self.sub_state,
+                self.depth,
+                &receive_address[..].to_vec(),
+                &data.to_vec(),
+            ),
+            CallType::StaticCall => interpreter::static_call(
+                self.sub_state,
+                self.depth,
+                &receive_address[..].to_vec(),
+                &data.to_vec(),
+            ),
             CallType::CallCode => {
                 // Call another contract using storage of the current contract
                 // Can leave unimplemented, no longer used.
                 not_implemented("CallCode");
                 unimplemented!()
             }
-            CallType::DelegateCall => {
-                interpreter::delegate_call(
-                    self.sub_state,
-                    self.depth,
-                    &receive_address[..].to_vec(),
-                    &code_address[..].to_vec(),
-                    &data.to_vec()
-                )
-            }
+            CallType::DelegateCall => interpreter::delegate_call(
+                self.sub_state,
+                self.depth,
+                &receive_address[..].to_vec(),
+                &code_address[..].to_vec(),
+                &data.to_vec(),
+            ),
         };
 
         // GasLeft into MessageCallResult
         let res = match opt_gas_left {
             Some(GasLeft::Known(gas_left)) => {
                 vm::MessageCallResult::Success(gas_left, ReturnData::empty())
-            },
-            Some(GasLeft::NeedsReturn{
-                gas_left, data, apply_state: true
-            }) => {
-                vm::MessageCallResult::Success(gas_left, data)
-            },
-            Some(GasLeft::NeedsReturn{
-                gas_left, data, apply_state: false
-            }) => {
-                vm::MessageCallResult::Reverted(gas_left, data)
-            },
+            }
+            Some(GasLeft::NeedsReturn {
+                gas_left,
+                data,
+                apply_state: true,
+            }) => vm::MessageCallResult::Success(gas_left, data),
+            Some(GasLeft::NeedsReturn {
+                gas_left,
+                data,
+                apply_state: false,
+            }) => vm::MessageCallResult::Reverted(gas_left, data),
             _ => vm::MessageCallResult::Failed,
         };
 
@@ -198,7 +182,10 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Returns code at given address
     fn extcode(&self, address: &Address) -> EvmResult<Option<Arc<Bytes>>> {
-        let code = self.sub_state.code_at(&address.0.to_vec()).map(|c| Arc::new(c));
+        let code = self
+            .sub_state
+            .code_at(&address.0.to_vec())
+            .map(|c| Arc::new(c));
         Ok(code)
     }
 
@@ -218,9 +205,9 @@ impl<'a> vm::Ext for NearExt<'a> {
     /// Creates log entry with given topics and data
     fn log(&mut self, _topics: Vec<H256>, data: &[u8]) -> EvmResult<()> {
         if self.is_static() {
-            return Err(VmError::MutableCallInStaticContext)
+            return Err(VmError::MutableCallInStaticContext);
         }
-        near_bindgen::env::log(format!("evm log: {}",hex::encode(data)).as_bytes());
+        near_bindgen::env::log(format!("evm log: {}", hex::encode(data)).as_bytes());
         Ok(())
     }
 

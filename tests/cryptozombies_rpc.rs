@@ -4,23 +4,28 @@ use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
 
 use near_crypto::{InMemorySigner, KeyType};
-use near_testlib::user::{rpc_user::RpcUser, User};
-use near_primitives::views::FinalExecutionStatus;
 use near_primitives::serialize::from_base64;
+use near_primitives::views::FinalExecutionStatus;
+use near_testlib::user::{rpc_user::RpcUser, User};
 
-use near_evm::utils::{sender_name_to_eth_address};
+use near_evm::utils::sender_name_to_eth_address;
 
 use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 
 const CONTRACT_NAME: &str = "near_evm";
-const LOTS_OF_GAS:u64 = 1_000_000_000_000_000_000;
+const LOTS_OF_GAS: u64 = 1_000_000_000_000_000_000;
 
 fn create_account(client: &mut RpcUser, account_signer: &InMemorySigner) {
     let devnet_signer = InMemorySigner::from_seed("test.near", KeyType::ED25519, "alice.near");
     let devnet_account_id = devnet_signer.account_id.clone();
     let old_signer = client.signer();
     client.set_signer(Arc::new(devnet_signer));
-    let tx_result = client.create_account(devnet_account_id, account_signer.account_id.clone(), account_signer.public_key.clone(), 10_000_000_000);
+    let tx_result = client.create_account(
+        devnet_account_id,
+        account_signer.account_id.clone(),
+        account_signer.public_key.clone(),
+        10_000_000_000,
+    );
     client.set_signer(old_signer);
     println!("Create account: {:?}", tx_result);
 }
@@ -34,15 +39,35 @@ fn deploy_evm(client: &RpcUser, account_signer: &InMemorySigner) {
 
 fn deploy_cryptozombies(client: &RpcUser, account_signer: &InMemorySigner) {
     let zombie_code = include_bytes!("../src/tests/zombieAttack.bin").to_vec();
-    let input = format!("{{\"contract_address\":\"cryptozombies\",\"bytecode\":\"{}\"}}", String::from_utf8(zombie_code).unwrap());
-    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "deploy_code", input.into_bytes(), LOTS_OF_GAS, 0);
+    let input = format!(
+        "{{\"contract_address\":\"cryptozombies\",\"bytecode\":\"{}\"}}",
+        String::from_utf8(zombie_code).unwrap()
+    );
+    let tx_result = client.function_call(
+        account_signer.account_id.clone(),
+        CONTRACT_NAME.to_string(),
+        "deploy_code",
+        input.into_bytes(),
+        LOTS_OF_GAS,
+        0,
+    );
     println!("deploy_code(cryptozombies): {:?}", tx_result);
 }
 
 fn create_random_zombie(client: &RpcUser, account_signer: &InMemorySigner, name: &str) {
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call(name.to_string());
-    let input = format!("{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}", hex::encode(input));
-    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "call_contract", input.into_bytes(), LOTS_OF_GAS, 0);
+    let input = format!(
+        "{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}",
+        hex::encode(input)
+    );
+    let tx_result = client.function_call(
+        account_signer.account_id.clone(),
+        CONTRACT_NAME.to_string(),
+        "call_contract",
+        input.into_bytes(),
+        LOTS_OF_GAS,
+        0,
+    );
     println!("call_contract(createRandomZombie): {:?}", tx_result);
 }
 
@@ -52,8 +77,18 @@ fn get_zombies_by_owner(
     owner: Address,
 ) -> Vec<Uint> {
     let (input, _decoder) = cryptozombies::functions::get_zombies_by_owner::call(owner);
-    let input = format!("{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}", hex::encode(input));
-    let tx_result = client.function_call(account_signer.account_id.clone(), CONTRACT_NAME.to_string(), "call_contract", input.into_bytes(), LOTS_OF_GAS, 0);
+    let input = format!(
+        "{{\"contract_address\":\"cryptozombies\",\"encoded_input\":\"{}\"}}",
+        hex::encode(input)
+    );
+    let tx_result = client.function_call(
+        account_signer.account_id.clone(),
+        CONTRACT_NAME.to_string(),
+        "call_contract",
+        input.into_bytes(),
+        LOTS_OF_GAS,
+        0,
+    );
     println!("call_contract(getZombiesByOwner): {:?}", tx_result);
     if let FinalExecutionStatus::SuccessValue(ref base64) = tx_result.as_ref().unwrap().status {
         let bytes = from_base64(base64).unwrap();
@@ -70,7 +105,7 @@ fn test_zombie() {
     let addr = "localhost:3030";
     let signer = InMemorySigner::from_seed(CONTRACT_NAME, KeyType::ED25519, CONTRACT_NAME);
     let signer = Arc::new(signer);
-    let mut user = RpcUser::new(addr, "alice.near".to_owned(),signer.clone());
+    let mut user = RpcUser::new(addr, "alice.near".to_owned(), signer.clone());
     create_account(&mut user, &signer);
     deploy_evm(&user, &signer);
     deploy_cryptozombies(&user, &signer);

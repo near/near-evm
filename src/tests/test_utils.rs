@@ -1,5 +1,5 @@
+use near_bindgen::MockedBlockchain;
 use near_bindgen::{testing_env, VMContext};
-use near_bindgen::{MockedBlockchain};
 
 use crate::EvmContract;
 
@@ -23,13 +23,14 @@ fn get_context(input: Vec<u8>) -> VMContext {
     }
 }
 
-
 pub fn run_test<T>(test: T) -> ()
-    where T: FnOnce(&mut EvmContract) -> () {
-        let mut context = get_context(vec![]);
-        context.signer_account_id = "owner1".to_owned();
-        testing_env!(context);
+where
+    T: FnOnce(&mut EvmContract) -> (),
+{
+    let mut context = get_context(vec![]);
+    context.signer_account_id = "owner1".to_owned();
+    testing_env!(context);
 
-        let mut contract = EvmContract::default();
-        test(&mut contract)
-    }
+    let mut contract = EvmContract::default();
+    test(&mut contract)
+}

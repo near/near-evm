@@ -1,23 +1,22 @@
 use std::collections::HashMap;
 
-use vm::{GasLeft};
+use vm::GasLeft;
 
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 
 use near_bindgen::collections::Map as NearMap;
 use near_bindgen::{env, near_bindgen as near_bindgen_macro};
 
 use crate::evm_state::{EvmState, StateStore};
-use crate::utils::{prefix_for_contract_storage};
+use crate::utils::prefix_for_contract_storage;
 
 #[cfg(test)]
 mod tests;
 
-mod near_ext;
 mod evm_state;
 mod interpreter;
+mod near_ext;
 pub mod utils;
-
 
 #[near_bindgen_macro]
 #[derive(BorshDeserialize, BorshSerialize, Default)]
@@ -48,7 +47,12 @@ impl EvmState for EvmContract {
         self.contract_storage(address).get(key)
     }
 
-    fn set_contract_storage(&mut self, address: &Vec<u8>, key: &Vec<u8>, value: &Vec<u8>)  -> Option<Vec<u8>> {
+    fn set_contract_storage(
+        &mut self,
+        address: &Vec<u8>,
+        key: &Vec<u8>,
+        value: &Vec<u8>,
+    ) -> Option<Vec<u8>> {
         self.contract_storage(address).insert(key, value)
     }
 
@@ -57,8 +61,6 @@ impl EvmState for EvmContract {
         self.commit_balances(&other.balances);
         self.commit_storages(&other.storages);
     }
-
-
 }
 
 #[near_bindgen_macro]
@@ -68,7 +70,10 @@ impl EvmContract {
         let contract_address = contract_address.into_bytes();
 
         if self.code_at(&contract_address).is_some() {
-            panic!(format!("Contract exists at {}", hex::encode(contract_address)));
+            panic!(format!(
+                "Contract exists at {}",
+                hex::encode(contract_address)
+            ));
         }
 
         self.set_code(&contract_address, &code);
@@ -78,9 +83,16 @@ impl EvmContract {
         match opt {
             Some(data) => {
                 self.set_code(&contract_address, &data);
-                env::log(format!("ok deployed {} bytes of code at address {}", data.len(), hex::encode(&contract_address)).as_bytes());
+                env::log(
+                    format!(
+                        "ok deployed {} bytes of code at address {}",
+                        data.len(),
+                        hex::encode(&contract_address)
+                    )
+                    .as_bytes(),
+                );
             }
-            None => panic!("init failed")
+            None => panic!("init failed"),
         }
     }
 
@@ -91,18 +103,20 @@ impl EvmContract {
 
         match result {
             Some(v) => hex::encode(v),
-            None => panic!("internal command returned None")
+            None => panic!("internal command returned None"),
         }
     }
 }
 
 impl EvmContract {
     pub fn commit_code(&mut self, other: &HashMap<Vec<u8>, Vec<u8>>) {
-        self.code.extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+        self.code
+            .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
     pub fn commit_balances(&mut self, other: &HashMap<Vec<u8>, u64>) {
-        self.balances.extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+        self.balances
+            .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
     pub fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
@@ -113,22 +127,23 @@ impl EvmContract {
         }
     }
 
-    fn contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>>  {
-         self.storages.get(address).unwrap_or_else(|| {
-            self.get_new_contract_storage(address)
-        })
+    fn contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>> {
+        self.storages
+            .get(address)
+            .unwrap_or_else(|| self.get_new_contract_storage(address))
     }
 
-    fn get_new_contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>>{
+    fn get_new_contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>> {
         let storage_prefix = prefix_for_contract_storage(&address);
         let storage = NearMap::<Vec<u8>, Vec<u8>>::new(storage_prefix);
         storage
     }
 
     fn call_contract_internal(
-            &mut self,
-            contract_address: &Vec<u8>,
-            encoded_input: String) -> Option<Vec<u8>> {
+        &mut self,
+        contract_address: &Vec<u8>,
+        encoded_input: String,
+    ) -> Option<Vec<u8>> {
         // decode
         let input = encoded_input;
         let input = hex::decode(input).expect("invalid hex");
@@ -138,20 +153,21 @@ impl EvmContract {
             self,
             0, // call-stack depth
             contract_address,
-            &input);
+            &input,
+        );
 
         match result {
-            Some(GasLeft::Known(_)) => {  // No returndata
+            Some(GasLeft::Known(_)) => {
+                // No returndata
                 Some(vec![])
-            },
-            Some(GasLeft::NeedsReturn{   // NB: EVM handles this separately because returning data costs variable gas
+            }
+            Some(GasLeft::NeedsReturn {
+                // NB: EVM handles this separately because returning data costs variable gas
                 gas_left: _,
                 data,
                 apply_state: _,
-            }) => {
-                Some(data.to_vec())
-            },
-            None => None
+            }) => Some(data.to_vec()),
+            None => None,
         }
     }
 }

@@ -16,7 +16,7 @@ fn get_context(input: Vec<u8>) -> VMContext {
         account_locked_balance: 0,
         storage_usage: 0,
         attached_deposit: 0,
-        prepaid_gas: 10u64.pow(9),
+        prepaid_gas: 2u64.pow(63),
         random_seed: vec![0, 1, 2],
         is_view: false,
         output_data_receivers: vec![],

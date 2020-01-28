@@ -166,7 +166,7 @@ impl EvmContract {
                     &amount.to_be_bytes().to_vec(),
                     &env::current_account_id(),
                     0,
-                    10u64.pow(9))
+                    2u64.pow(63))
             );
     }
 

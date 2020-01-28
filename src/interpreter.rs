@@ -8,12 +8,13 @@ use crate::evm_state::{EvmState, StateStore, SubState};
 use crate::near_ext::NearExt;
 use crate::utils::sender_as_eth;
 
-pub fn deploy_code(_state: &mut dyn EvmState, _code: &Vec<u8>, _address: &Vec<u8>) {
-    unimplemented!()
+pub fn deploy_code(state: &mut dyn EvmState, address: &Vec<u8>, code: &Vec<u8>) {
+    state.set_code(address, code);
 }
 
 pub fn call(
     state: &mut dyn EvmState,
+    sender: &Vec<u8>,
     value: Option<U256>,
     call_stack_depth: usize,
     contract_address: &Vec<u8>,
@@ -21,6 +22,7 @@ pub fn call(
 ) -> Option<GasLeft> {
     run_and_commit_if_success(
         state,
+        sender,
         value,
         call_stack_depth,
         contract_address,
@@ -32,22 +34,25 @@ pub fn call(
 
 pub fn delegate_call(
     state: &mut dyn EvmState,
+    sender: &Vec<u8>,
     call_stack_depth: usize,
     context: &Vec<u8>,
     delegee: &Vec<u8>,
     input: &Vec<u8>,
 ) -> Option<GasLeft> {
-    run_and_commit_if_success(state, None, call_stack_depth, context, delegee, input, false)
+    run_and_commit_if_success(state, sender, None, call_stack_depth, context, delegee, input, false)
 }
 
 pub fn static_call(
     state: &mut dyn EvmState,
+    sender: &Vec<u8>,
     call_stack_depth: usize,
     contract_address: &Vec<u8>,
     input: &Vec<u8>,
 ) -> Option<GasLeft> {
     run_and_commit_if_success(
         state,
+        sender,
         None,
         call_stack_depth,
         contract_address,
@@ -60,6 +65,7 @@ pub fn static_call(
 // TODO: maybe don't run static calls through here?
 fn run_and_commit_if_success(
     state: &mut dyn EvmState,
+    sender: &Vec<u8>,
     value: Option<U256>,
     call_stack_depth: usize,
     state_address: &Vec<u8>,
@@ -70,6 +76,7 @@ fn run_and_commit_if_success(
     // run the interpreter and
     let (result, state_updates) = run_against_state(
         state,
+        sender,
         value,
         call_stack_depth,
         state_address,
@@ -108,6 +115,7 @@ fn run_and_commit_if_success(
 /// Runs the interpreter. Produces state diffs
 fn run_against_state(
     state: &dyn EvmState,
+    sender: &Vec<u8>,
     value: Option<U256>,
     call_stack_depth: usize,
     state_address: &Vec<u8>,
@@ -119,7 +127,7 @@ fn run_against_state(
     let code = state.code_at(code_address).expect("code does not exist");
 
     let mut store = StateStore::default();
-    let mut sub_state = SubState::new(&mut store, state);
+    let mut sub_state = SubState::new(sender, &mut store, state);
 
     let mut params = ActionParams::default();
 

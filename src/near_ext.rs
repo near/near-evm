@@ -101,10 +101,28 @@ impl<'a> vm::Ext for NearExt<'a> {
         &mut self,
         _gas: &U256,
         _value: &U256,
-        _code: &[u8],
-        _address: CreateContractAddress,
+        code: &[u8],
+        address_type: CreateContractAddress,
         _trap: bool,
     ) -> Result<ContractCreateResult, TrapKind> {
+
+        let mut nonce = U256::default();
+        if address_type == CreateContractAddress::FromSenderAndNonce {
+            // TODO: we should create a new substate
+            //       and commit to the increment in the substate AFTER success
+            //       I think we have no failure cases right now, so that can wait
+            nonce = self.sub_state.next_nonce(&self.context_addr);
+        }
+
+        let (addr, _) = utils::evm_contract_address(
+            address_type,
+            &utils::internal_address_to_eth_account(&self.context_addr),
+            &nonce,
+            code
+        );
+
+        interpreter::deploy_code(self.sub_state, &addr.0.to_vec(), &code.to_vec());
+
         // https://github.com/paritytech/parity-ethereum/blob/master/ethcore/vm/src/ext.rs#L57-L64
         not_implemented("create");
         unimplemented!()
@@ -118,7 +136,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn call(
         &mut self,
         _gas: &U256,
-        _sender_address: &Address,
+        sender_address: &Address,
         receive_address: &Address,
         value: Option<U256>,
         data: &[u8],
@@ -134,6 +152,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::Call => interpreter::call(
                 self.sub_state,
+                &sender_address.0.to_vec(),
                 value,
                 self.depth,
                 &receive_address[..].to_vec(),
@@ -141,6 +160,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             ),
             CallType::StaticCall => interpreter::static_call(
                 self.sub_state,
+                &sender_address.0.to_vec(),
                 self.depth,
                 &receive_address[..].to_vec(),
                 &data.to_vec(),
@@ -153,6 +173,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::DelegateCall => interpreter::delegate_call(
                 self.sub_state,
+                &sender_address.0.to_vec(),
                 self.depth,
                 &receive_address[..].to_vec(),
                 &code_address[..].to_vec(),

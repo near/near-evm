@@ -7,10 +7,34 @@ pub trait EvmState {
     fn set_code(&mut self, address: &Vec<u8>, bytecode: &Vec<u8>);
 
     fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]>;
-    fn set_balance(&mut self, address: &Vec<u8>, balance: U256) -> Option<U256>;
+    fn set_balance(&mut self, address: &Vec<u8>, balance: U256) -> Option<U256> {
+        let mut bin = [0u8; 32];
+        balance.to_big_endian(&mut bin);
+        self._set_balance(address, bin).map(|v| v.into())
+    }
 
     fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32];
-    fn balance_of(&self, address: &Vec<u8>) -> U256;
+    fn balance_of(&self, address: &Vec<u8>) -> U256 {
+        self._balance_of(address).into()
+    }
+
+    fn _set_nonce(&mut self, address: &Vec<u8>, nonce: [u8; 32]) -> Option<[u8; 32]>;
+    fn set_nonce(&mut self, address: &Vec<u8>, nonce: U256) -> Option<U256> {
+        let mut bin = [0u8; 32];
+        nonce.to_big_endian(&mut bin);
+        self._set_balance(address, bin).map(|v| v.into())
+    }
+
+    fn _nonce_of(&self, address: &Vec<u8>) -> [u8; 32];
+    fn nonce_of(&self, address: &Vec<u8>) -> U256 {
+        self._nonce_of(address).into()
+    }
+
+    fn next_nonce(&mut self, address: &Vec<u8>)  -> U256 {
+        let next = self.nonce_of(address) + 1;
+        self.set_nonce(address, next);
+        next
+    }
 
     fn read_contract_storage(&self, address: &Vec<u8>, key: &Vec<u8>) -> Option<Vec<u8>>;
     fn set_contract_storage(
@@ -46,6 +70,7 @@ pub trait EvmState {
 pub struct StateStore {
     pub code: HashMap<Vec<u8>, Vec<u8>>,
     pub balances: HashMap<Vec<u8>, [u8; 32]>,
+    pub nonces: HashMap<Vec<u8>, [u8; 32]>,
     pub storages: HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>,
 }
 
@@ -75,13 +100,14 @@ impl StateStore {
 }
 
 pub struct SubState<'a> {
+    pub msg_sender: &'a Vec<u8>,
     pub state: &'a mut StateStore,
     pub parent: &'a dyn EvmState,
 }
 
 impl SubState<'_> {
-    pub fn new<'a>(state: &'a mut StateStore, parent: &'a dyn EvmState) -> SubState<'a> {
-        SubState { state, parent }
+    pub fn new<'a>(msg_sender: &'a Vec<u8>, state: &'a mut StateStore, parent: &'a dyn EvmState) -> SubState<'a> {
+        SubState { msg_sender, state, parent }
     }
 
     pub fn contract_storage(&self, address: &Vec<u8>) -> Option<&HashMap<Vec<u8>, Vec<u8>>> {
@@ -115,18 +141,19 @@ impl EvmState for SubState<'_> {
             .map_or_else(|| self.parent._balance_of(address), |k| k.clone())
     }
 
-    fn balance_of(&self, address: &Vec<u8>) -> U256 {
-        self._balance_of(address).into()
-    }
-
     fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]> {
         self.state.balances.insert(address.to_vec(), balance)
     }
 
-    fn set_balance(&mut self, address: &Vec<u8>, balance: U256) -> Option<U256> {
-        let mut bin = [0u8; 32];
-        balance.to_big_endian(&mut bin);
-        self._set_balance(address, bin).map(|v| v.into())
+    fn _nonce_of(&self, address: &Vec<u8>) -> [u8; 32] {
+        self.state
+            .nonces
+            .get(address)
+            .map_or_else(|| self.parent._nonce_of(address), |k| k.clone())
+    }
+
+    fn _set_nonce(&mut self, address: &Vec<u8>, nonce: [u8; 32]) -> Option<[u8; 32]> {
+        self.state.nonces.insert(address.to_vec(), nonce)
     }
 
     fn read_contract_storage(&self, address: &Vec<u8>, key: &Vec<u8>) -> Option<Vec<u8>> {

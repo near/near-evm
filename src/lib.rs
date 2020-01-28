@@ -7,7 +7,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 use near_vm_logic::types::{AccountId, Balance};
 use near_bindgen::collections::Map as NearMap;
-use near_bindgen::{callback_args, env, ext_contract, near_bindgen as near_bindgen_macro, Promise};
+use near_bindgen::{env, ext_contract, near_bindgen as near_bindgen_macro, Promise};
 
 use crate::evm_state::{EvmState, StateStore};
 use crate::utils::prefix_for_contract_storage;
@@ -25,12 +25,13 @@ pub mod utils;
 pub struct EvmContract {
     code: NearMap<Vec<u8>, Vec<u8>>,
     balances: NearMap<Vec<u8>, [u8; 32]>,
+    nonces: NearMap<Vec<u8>, [u8; 32]>,
     storages: NearMap<Vec<u8>, NearMap<Vec<u8>, Vec<u8>>>,
 }
 
 #[ext_contract]
 pub trait Callback {
-    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Vec<u8>);
+    fn finalize_retrieve_near(&mut self, addr: Vec<u8>, amount: Vec<u8>);
 }
 
 impl EvmState for EvmContract {
@@ -48,19 +49,18 @@ impl EvmState for EvmContract {
         self.balances.insert(address, &balance)
     }
 
-    fn set_balance(&mut self, address: &Vec<u8>, balance: U256) -> Option<U256> {
-        let mut bin = [0u8; 32];
-        balance.to_big_endian(&mut bin);
-        self._set_balance(address, bin).map(|v| v.into())
-    }
-
     // default balance of 0
     fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32] {
         self.balances.get(address).unwrap_or([0u8; 32])
     }
 
-    fn balance_of(&self, address: &Vec<u8>) -> U256 {
-        self._balance_of(address).into()
+    fn _set_nonce(&mut self, address: &Vec<u8>, nonce: [u8; 32]) -> Option<[u8; 32]> {
+        self.nonces.insert(address, &nonce)
+    }
+
+    // default nonce of 0
+    fn _nonce_of(&self, address: &Vec<u8>) -> [u8; 32] {
+        self.nonces.get(address).unwrap_or([0u8; 32])
     }
 
     // Default storage of None
@@ -162,15 +162,15 @@ impl EvmContract {
             .transfer(amount)
             .then(
                 callback::finalize_retrieve_near(
-                    &addr,
-                    &amount.to_be_bytes().to_vec(),
+                    addr,
+                    amount.to_be_bytes().to_vec(),
                     &env::current_account_id(),
                     0,
                     2u64.pow(63))
             );
     }
 
-    pub fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Vec<u8>) {
+    pub fn finalize_retrieve_near(&mut self, addr: Vec<u8>, amount: Vec<u8>) {
         let mut bin = [0u8; 16];
         bin.copy_from_slice(&amount[..]);
         // panics if called externally
@@ -178,7 +178,7 @@ impl EvmContract {
             env::current_account_id(),
             env::predecessor_account_id());
         // panics if insufficient balance
-        self.sub_balance(addr, balance_to_u256(&Balance::from_be_bytes(bin)));
+        self.sub_balance(&addr, balance_to_u256(&Balance::from_be_bytes(bin)));
     }
 }
 
@@ -229,6 +229,7 @@ impl EvmContract {
         // run
         let result = interpreter::call(
             self,
+            &utils::sender_name_to_internal_address(&env::predecessor_account_id()),
             value,
             0, // call-stack depth
             contract_address,

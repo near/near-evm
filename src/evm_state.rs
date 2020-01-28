@@ -22,6 +22,8 @@ pub trait EvmState {
 
     fn commit_changes(&mut self, other: &StateStore);
 
+    // panics on overflow (this seems unlikely)
+    // TODO: ensure this never becomes larger than 2 ** 128
     fn add_balance(&mut self, address: &Vec<u8>, incr: U256) -> Option<U256> {
         let balance = self.balance_of(address);
         let new_balance = balance
@@ -30,6 +32,7 @@ pub trait EvmState {
         self.set_balance(address, new_balance)
     }
 
+    // panics if insufficient balance
     fn sub_balance(&mut self, address: &Vec<u8>, decr: U256) -> Option<U256> {
         let balance = self.balance_of(address);
         let new_balance = balance

@@ -89,7 +89,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     }
 
     fn balance(&self, address: &Address) -> EvmResult<U256> {
-        Ok(self.sub_state.balance_of(&address.0.to_vec()).into())
+        Ok(self.sub_state.balance_of(&address.0.to_vec()))
     }
 
     fn blockhash(&mut self, _number: &U256) -> H256 {
@@ -208,6 +208,13 @@ impl<'a> vm::Ext for NearExt<'a> {
         if self.is_static() {
             return Err(VmError::MutableCallInStaticContext);
         }
+
+        // TODO: Develop a NearCall logspec
+        //       hijack NearCall logs here
+        //       make a Vec<log> that accumulates committed logs
+        //       return them after execution completes
+        //       dispatch promises
+
         near_bindgen::env::log(format!("evm log: {}", hex::encode(data)).as_bytes());
         Ok(())
     }

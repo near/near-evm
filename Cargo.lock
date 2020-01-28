@@ -2099,6 +2099,7 @@ dependencies = [
  "near-crypto 0.1.0 (git+https://github.com/nearprotocol/nearcore?branch=staging)",
  "near-jsonrpc-client 0.1.0 (git+https://github.com/nearprotocol/nearcore?branch=staging)",
  "near-primitives 0.1.0 (git+https://github.com/nearprotocol/nearcore?branch=staging)",
+ "near-vm-logic 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-bytes 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",

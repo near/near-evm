@@ -5,8 +5,9 @@ use ethereum_types::U256;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
+use near_vm_logic::types::Balance;
 use near_bindgen::collections::Map as NearMap;
-use near_bindgen::{env, near_bindgen as near_bindgen_macro};
+use near_bindgen::{env, near_bindgen as near_bindgen_macro, Promise};
 
 use crate::evm_state::{EvmState, StateStore};
 use crate::utils::prefix_for_contract_storage;
@@ -28,6 +29,8 @@ pub struct EvmContract {
 }
 
 impl EvmState for EvmContract {
+
+    // Default code of None
     fn code_at(&self, address: &Vec<u8>) -> Option<Vec<u8>> {
         self.code.get(address)
     }
@@ -46,6 +49,7 @@ impl EvmState for EvmContract {
         self._set_balance(address, bin).map(|v| v.into())
     }
 
+    // default balance of 0
     fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32] {
         self.balances.get(address).unwrap_or([0u8; 32])
     }
@@ -54,6 +58,7 @@ impl EvmState for EvmContract {
         self._balance_of(address).into()
     }
 
+    // Default storage of None
     fn read_contract_storage(&self, address: &Vec<u8>, key: &Vec<u8>) -> Option<Vec<u8>> {
         self.contract_storage(address).get(key)
     }
@@ -89,7 +94,7 @@ impl EvmContract {
 
         self.set_code(&contract_address, &code);
 
-        let val = attached_deposit_as_u256();
+        let val = attached_deposit_as_u256_opt();
         let opt = self.call_contract_internal(
             val,
             &contract_address,
@@ -113,7 +118,7 @@ impl EvmContract {
 
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = contract_address.into_bytes();
-        let val = attached_deposit_as_u256();
+        let val = attached_deposit_as_u256_opt();
 
         let result = self.call_contract_internal(val, &contract_address, encoded_input);
 
@@ -123,13 +128,29 @@ impl EvmContract {
         }
     }
 
-    pub fn add_near(&mut self, destination_address: String) {
-        let val = attached_deposit_as_u256();
+    pub fn add_near(&mut self) -> Balance {
+        let val = attached_deposit_as_u256_opt().expect("Did not attach value");
+        let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
 
+        self.add_balance(&addr, val);
+        u256_to_balance(&self.balance_of(&addr))
     }
 
-    pub fn retrieve_near(&mut self, destination_address: String) {
+    pub fn retrieve_near(&mut self, destination_address: String, amount: Balance) -> Balance {
+        let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
 
+        // panics if insufficient
+        self.sub_balance(&addr, balance_to_u256(&amount));
+
+        Promise::new(env::current_account_id())
+            .transfer(amount);
+
+        u256_to_balance(&self.balance_of(&addr))
+    }
+
+    pub fn balance(&self, address: String) -> Balance {
+        let addr = utils::sender_name_to_internal_address(&address);
+        u256_to_balance(&self.balance_of(&addr))
     }
 }
 
@@ -201,14 +222,25 @@ impl EvmContract {
     }
 }
 
-fn attached_deposit_as_u256() -> Option<U256> {
+fn attached_deposit_as_u256_opt() -> Option<U256> {
     let attached = env::attached_deposit();
     if attached == 0 {
         None
     } else {
-        let mut bin = [0u8; 32];
-        bin[16..].copy_from_slice(&attached.to_be_bytes());
-
-        Some(bin.into())
+        Some(balance_to_u256(&attached))
     }
+}
+
+fn balance_to_u256(val: &Balance) -> U256 {
+    let mut bin = [0u8; 32];
+    bin[16..].copy_from_slice(&val.to_be_bytes());
+    bin.into()
+}
+
+fn u256_to_balance(val: &U256) -> Balance {
+    let mut scratch = [0u8; 32];
+    let mut bin = [0u8; 16];
+    val.to_big_endian(&mut scratch);
+    bin.copy_from_slice(&scratch[16..]);
+    Balance::from_be_bytes(bin)
 }

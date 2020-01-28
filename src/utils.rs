@@ -20,3 +20,11 @@ pub fn sender_name_to_eth_address(sender: &str) -> Address {
     sender.resize(20, 0);
     Address::from_slice(&sender[0..20])
 }
+
+pub fn eth_account_to_internal_address(addr: Address) -> Vec<u8> {
+    addr.0.to_vec()
+}
+
+pub fn sender_name_to_internal_address(sender: &str) -> Vec<u8> {
+    eth_account_to_internal_address(sender_name_to_eth_address(sender))
+}

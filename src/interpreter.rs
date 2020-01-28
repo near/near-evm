@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ethereum_types::U256;
+use ethereum_types::{Address, U256};
 use evm::Factory;
 use vm::{ActionParams, ActionValue, CallType, Ext, GasLeft, Schedule};
 
@@ -8,16 +8,16 @@ use crate::evm_state::{EvmState, StateStore, SubState};
 use crate::near_ext::NearExt;
 use crate::utils;
 
-pub fn deploy_code(state: &mut dyn EvmState, address: &Vec<u8>, code: &Vec<u8>) {
+pub fn deploy_code(state: &mut dyn EvmState, address: &Address, code: &Vec<u8>) {
     state.set_code(address, code);
 }
 
 pub fn call(
     state: &mut dyn EvmState,
-    sender: &Vec<u8>,
+    sender: &Address,            // TODO: change this all to address
     value: Option<U256>,
     call_stack_depth: usize,
-    contract_address: &Vec<u8>,
+    contract_address: &Address,
     input: &Vec<u8>,
 ) -> Option<GasLeft> {
     run_and_commit_if_success(
@@ -34,10 +34,10 @@ pub fn call(
 
 pub fn delegate_call(
     state: &mut dyn EvmState,
-    sender: &Vec<u8>,
+    sender: &Address,
     call_stack_depth: usize,
-    context: &Vec<u8>,
-    delegee: &Vec<u8>,
+    context: &Address,
+    delegee: &Address,
     input: &Vec<u8>,
 ) -> Option<GasLeft> {
     run_and_commit_if_success(state, sender, None, call_stack_depth, context, delegee, input, false)
@@ -45,9 +45,9 @@ pub fn delegate_call(
 
 pub fn static_call(
     state: &mut dyn EvmState,
-    sender: &Vec<u8>,
+    sender: &Address,
     call_stack_depth: usize,
-    contract_address: &Vec<u8>,
+    contract_address: &Address,
     input: &Vec<u8>,
 ) -> Option<GasLeft> {
     run_and_commit_if_success(
@@ -65,11 +65,11 @@ pub fn static_call(
 // TODO: maybe don't run static calls through here?
 fn run_and_commit_if_success(
     state: &mut dyn EvmState,
-    sender: &Vec<u8>,
+    sender: &Address,
     value: Option<U256>,
     call_stack_depth: usize,
-    state_address: &Vec<u8>,
-    code_address: &Vec<u8>,
+    state_address: &Address,
+    code_address: &Address,
     input: &Vec<u8>,
     is_static: bool,
 ) -> Option<GasLeft> {
@@ -115,11 +115,11 @@ fn run_and_commit_if_success(
 /// Runs the interpreter. Produces state diffs
 fn run_against_state(
     state: &dyn EvmState,
-    sender: &Vec<u8>,
+    sender: &Address,
     value: Option<U256>,
     call_stack_depth: usize,
-    state_address: &Vec<u8>,
-    code_address: &Vec<u8>,
+    state_address: &Address,
+    code_address: &Address,
     input: &Vec<u8>,
     is_static: bool,
 ) -> (Option<GasLeft>, Option<StateStore>) {
@@ -134,14 +134,14 @@ fn run_against_state(
     params.call_type = CallType::None;
     params.code = Some(Arc::new(code));
     params.origin = utils::predecessor_as_eth();
-    params.sender = utils::internal_address_to_eth_account(sender);
+    params.sender = *sender;
     params.gas = U256::from(startgas);
     params.data = Some(input.to_vec());
     if let Some(val) = value {
         params.value = ActionValue::Transfer(val)
     }
     let mut ext = NearExt::new(
-        state_address.to_vec(),
+        *state_address,
         &mut sub_state,
         call_stack_depth,
         is_static,

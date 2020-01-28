@@ -16,7 +16,7 @@ use near_bindgen;
 pub struct NearExt<'a> {
     pub info: EnvInfo,
     pub schedule: Schedule,
-    pub context_addr: Vec<u8>,
+    pub context_addr: Address,
     pub selfdestruct_address: Option<Address>,
     pub sub_state: &'a mut SubState<'a>,
     pub static_flag: bool,
@@ -25,7 +25,7 @@ pub struct NearExt<'a> {
 
 impl<'a> NearExt<'a> {
     pub fn new(
-        context_addr: Vec<u8>,
+        context_addr: Address,
         sub_state: &'a mut SubState<'a>,
         depth: usize,
         static_flag: bool,
@@ -57,7 +57,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn storage_at(&self, key: &H256) -> EvmResult<H256> {
         let raw_val = self
             .sub_state
-            .read_contract_storage(&self.context_addr.to_vec(), &key.0.to_vec())
+            .read_contract_storage(&self.context_addr, &key.0.to_vec())
             .map(|v| v.clone())
             .unwrap_or(vec![0; 32]); // default to an empty vec of correct length
         Ok(H256::from_slice(&raw_val))
@@ -89,7 +89,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     }
 
     fn balance(&self, address: &Address) -> EvmResult<U256> {
-        Ok(self.sub_state.balance_of(&address.0.to_vec()))
+        Ok(self.sub_state.balance_of(address))
     }
 
     fn blockhash(&mut self, _number: &U256) -> H256 {
@@ -105,6 +105,9 @@ impl<'a> vm::Ext for NearExt<'a> {
         address_type: CreateContractAddress,
         _trap: bool,
     ) -> Result<ContractCreateResult, TrapKind> {
+        if self.is_static() {
+            panic!("MutableCallInStaticContext")
+        }
 
         let mut nonce = U256::default();
         if address_type == CreateContractAddress::FromSenderAndNonce {
@@ -116,12 +119,12 @@ impl<'a> vm::Ext for NearExt<'a> {
 
         let (addr, _) = utils::evm_contract_address(
             address_type,
-            &utils::internal_address_to_eth_account(&self.context_addr),
+            &self.context_addr,
             &nonce,
             code
         );
 
-        interpreter::deploy_code(self.sub_state, &addr.0.to_vec(), &code.to_vec());
+        interpreter::deploy_code(self.sub_state, &addr, &code.to_vec());
 
         // https://github.com/paritytech/parity-ethereum/blob/master/ethcore/vm/src/ext.rs#L57-L64
         not_implemented("create");
@@ -144,6 +147,11 @@ impl<'a> vm::Ext for NearExt<'a> {
         call_type: CallType,
         _trap: bool,
     ) -> Result<MessageCallResult, TrapKind> {
+
+        if self.is_static() && call_type != CallType::StaticCall {
+            panic!("MutableCallInStaticContext")
+        }
+
         let opt_gas_left = match call_type {
             CallType::None => {
                 // Can stay unimplemented
@@ -152,17 +160,17 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::Call => interpreter::call(
                 self.sub_state,
-                &sender_address.0.to_vec(),
+                sender_address,
                 value,
                 self.depth,
-                &receive_address[..].to_vec(),
+                receive_address,
                 &data.to_vec(),
             ),
             CallType::StaticCall => interpreter::static_call(
                 self.sub_state,
-                &sender_address.0.to_vec(),
+                sender_address,
                 self.depth,
-                &receive_address[..].to_vec(),
+                receive_address,
                 &data.to_vec(),
             ),
             CallType::CallCode => {
@@ -173,10 +181,10 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::DelegateCall => interpreter::delegate_call(
                 self.sub_state,
-                &sender_address.0.to_vec(),
+                sender_address,
                 self.depth,
-                &receive_address[..].to_vec(),
-                &code_address[..].to_vec(),
+                receive_address,
+                code_address,
                 &data.to_vec(),
             ),
         };
@@ -206,7 +214,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn extcode(&self, address: &Address) -> EvmResult<Option<Arc<Bytes>>> {
         let code = self
             .sub_state
-            .code_at(&address.0.to_vec())
+            .code_at(address)
             .map(|c| Arc::new(c));
         Ok(code)
     }
@@ -221,7 +229,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Returns code size at given address
     fn extcodesize(&self, address: &Address) -> EvmResult<Option<usize>> {
-        Ok(self.sub_state.code_at(&address.0.to_vec()).map(|c| c.len()))
+        Ok(self.sub_state.code_at(address).map(|c| c.len()))
     }
 
     /// Creates log entry with given topics and data

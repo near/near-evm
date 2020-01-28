@@ -4,6 +4,8 @@ use keccak_hash::keccak;
 
 use near_bindgen::env;
 
+// TODO: clean up all these
+
 pub fn predecessor_as_eth() -> Address {
     let mut sender = env::predecessor_account_id().into_bytes();
     sender.resize(20, 0);
@@ -17,24 +19,22 @@ pub fn prefix_for_contract_storage(contract_address: &[u8]) -> Vec<u8> {
     prefix
 }
 
-pub fn sender_name_to_eth_address(sender: &str) -> Address {
-    let mut sender = sender.to_string().into_bytes();
-    sender.resize(20, 0);
-    Address::from_slice(&sender[0..20])
+pub fn near_account_id_to_eth_address(account_id: &str) -> Address {
+    near_account_bytes_to_eth_address(&account_id.to_string().into_bytes())
 }
 
 pub fn eth_account_to_internal_address(addr: Address) -> Vec<u8> {
     addr.0.to_vec()
 }
 
-pub fn internal_address_to_eth_account(addr: &Vec<u8>) -> Address {
+pub fn near_account_bytes_to_eth_address(addr: &Vec<u8>) -> Address {
     let mut addr = addr.clone();
     addr.resize(20, 0);
-    Address::from_slice(&addr)
+    Address::from_slice(&addr[0..20])
 }
 
-pub fn sender_name_to_internal_address(sender: &str) -> Vec<u8> {
-    eth_account_to_internal_address(sender_name_to_eth_address(sender))
+pub fn near_account_id_to_internal_address(account_id: &str) -> Vec<u8> {
+    eth_account_to_internal_address(near_account_id_to_eth_address(account_id))
 }
 
 /// Returns new address created from address, nonce, and code hash

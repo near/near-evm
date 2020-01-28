@@ -1,7 +1,7 @@
 use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
 
-use crate::utils::sender_name_to_eth_address;
+use crate::utils;
 use crate::EvmContract;
 
 use super::test_utils;
@@ -73,19 +73,19 @@ fn test_create_random_zombie() {
         deploy_cryptozombies(&mut contract);
 
         assert_eq!(
-            get_zombies_by_owner(&mut contract, sender_name_to_eth_address(&"owner1".to_string())),
+            get_zombies_by_owner(&mut contract, utils::near_account_id_to_eth_address(&"owner1".to_string())),
             []
         );
 
         create_random_zombie(&mut contract, "zomb1");
         assert_eq!(
-            get_zombies_by_owner(&mut contract, sender_name_to_eth_address(&"owner1".to_string())),
+            get_zombies_by_owner(&mut contract, utils::near_account_id_to_eth_address(&"owner1".to_string())),
             [Uint::from(0)]
         );
 
         create_random_zombie(&mut contract, "zomb2");
         assert_eq!(
-            get_zombies_by_owner(&mut contract, sender_name_to_eth_address(&"owner1".to_string())),
+            get_zombies_by_owner(&mut contract, utils::near_account_id_to_eth_address(&"owner1".to_string())),
             [Uint::from(0)]
         );
     });

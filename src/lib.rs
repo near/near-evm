@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use vm::GasLeft;
-use ethereum_types::U256;
+use ethereum_types::{Address, U256};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
@@ -31,18 +31,20 @@ pub struct EvmContract {
 
 #[ext_contract]
 pub trait Callback {
-    fn finalize_retrieve_near(&mut self, addr: Vec<u8>, amount: Vec<u8>);
+    fn finalize_retrieve_near(&mut self, addr: Address, amount: Vec<u8>);
 }
 
 impl EvmState for EvmContract {
 
     // Default code of None
-    fn code_at(&self, address: &Vec<u8>) -> Option<Vec<u8>> {
-        self.code.get(address)
+    fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
+        let internal_addr = utils::eth_account_to_internal_address(*address);
+        self.code.get(&internal_addr)
     }
 
-    fn set_code(&mut self, address: &Vec<u8>, bytecode: &Vec<u8>) {
-        self.code.insert(address, bytecode);
+    fn set_code(&mut self, address: &Address, bytecode: &Vec<u8>) {
+        let internal_addr = utils::eth_account_to_internal_address(*address);
+        self.code.insert(&internal_addr, bytecode);
     }
 
     fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]> {
@@ -64,13 +66,13 @@ impl EvmState for EvmContract {
     }
 
     // Default storage of None
-    fn read_contract_storage(&self, address: &Vec<u8>, key: &Vec<u8>) -> Option<Vec<u8>> {
+    fn read_contract_storage(&self, address: &Address, key: &Vec<u8>) -> Option<Vec<u8>> {
         self.contract_storage(address).get(key)
     }
 
     fn set_contract_storage(
         &mut self,
-        address: &Vec<u8>,
+        address: &Address,
         key: &Vec<u8>,
         value: &Vec<u8>,
     ) -> Option<Vec<u8>> {
@@ -86,9 +88,10 @@ impl EvmState for EvmContract {
 
 #[near_bindgen_macro]
 impl EvmContract {
-    pub fn deploy_code(&mut self, contract_address: String, bytecode: String) {
+    // TODO: this is UNSAFE. need to calculate contract address rather than pass in
+    pub fn deploy_code(&mut self, contract_address: AccountId, bytecode: String) {
         let code = hex::decode(bytecode).expect("invalid hex");
-        let contract_address = contract_address.into_bytes();
+        let contract_address = utils::near_account_id_to_eth_address(&contract_address);
 
         if self.code_at(&contract_address).is_some() {
             panic!(format!(
@@ -121,8 +124,8 @@ impl EvmContract {
         }
     }
 
-    pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
-        let contract_address = contract_address.into_bytes();
+    pub fn call_contract(&mut self, contract_address: AccountId, encoded_input: String) -> String {
+        let contract_address = utils::near_account_id_to_eth_address(&contract_address);
         let val = attached_deposit_as_u256_opt();
 
         let result = self.call_contract_internal(val, &contract_address, encoded_input);
@@ -134,13 +137,13 @@ impl EvmContract {
     }
 
     pub fn balance(&self, address: AccountId) -> Balance {
-        let addr = utils::sender_name_to_internal_address(&address);
+        let addr = utils::near_account_id_to_eth_address(&address);
         u256_to_balance(&self.balance_of(&addr))
     }
 
     pub fn add_near(&mut self) -> Balance {
         let val = attached_deposit_as_u256_opt().expect("Did not attach value");
-        let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
+        let addr = utils::near_account_id_to_eth_address(&env::predecessor_account_id());
 
 
         self.add_balance(&addr, val);
@@ -148,7 +151,7 @@ impl EvmContract {
     }
 
     pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) {
-        let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
+        let addr = utils::near_account_id_to_eth_address(&env::predecessor_account_id());
 
         if u256_to_balance(&self.balance_of(&addr)) < amount {
             panic!("insufficient funds");
@@ -170,7 +173,7 @@ impl EvmContract {
             );
     }
 
-    pub fn finalize_retrieve_near(&mut self, addr: Vec<u8>, amount: Vec<u8>) {
+    pub fn finalize_retrieve_near(&mut self, addr: Address, amount: Vec<u8>) {
         let mut bin = [0u8; 16];
         bin.copy_from_slice(&amount[..]);
         // panics if called externally
@@ -198,16 +201,21 @@ impl EvmContract {
 
     fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
         for (k, v) in other.iter() {
-            let mut storage = self.contract_storage(k);
+            let mut storage = self._contract_storage(k);
             storage.extend(v.into_iter().map(|(k, v)| (k.clone(), v.clone())));
             self.storages.insert(k, &storage);
         }
     }
 
-    fn contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>> {
+    fn _contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>> {
         self.storages
             .get(address)
             .unwrap_or_else(|| self.get_new_contract_storage(address))
+    }
+
+    fn contract_storage(&self, address: &Address) -> NearMap<Vec<u8>, Vec<u8>> {
+        let internal_addr = utils::eth_account_to_internal_address(*address);
+        self._contract_storage(&internal_addr)
     }
 
     fn get_new_contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>> {
@@ -219,7 +227,7 @@ impl EvmContract {
     fn call_contract_internal(
         &mut self,
         value: Option<U256>,
-        contract_address: &Vec<u8>,
+        contract_address: &Address,
         encoded_input: String,
     ) -> Option<Vec<u8>> {
         // decode
@@ -229,10 +237,10 @@ impl EvmContract {
         // run
         let result = interpreter::call(
             self,
-            &utils::sender_name_to_internal_address(&env::predecessor_account_id()),
+            &utils::near_account_id_to_eth_address(&env::predecessor_account_id()),
             value,
             0, // call-stack depth
-            contract_address,
+            &contract_address,
             &input,
         );
 

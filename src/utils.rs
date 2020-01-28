@@ -23,8 +23,10 @@ pub fn near_account_id_to_eth_address(account_id: &str) -> Address {
     near_account_bytes_to_eth_address(&account_id.to_string().into_bytes())
 }
 
-pub fn eth_account_to_internal_address(addr: Address) -> Vec<u8> {
-    addr.0.to_vec()
+pub fn eth_account_to_internal_address(addr: Address) -> [u8; 20] {
+    let mut bin = [0u8; 20];
+    bin.copy_from_slice(&addr[..]);
+    bin
 }
 
 pub fn near_account_bytes_to_eth_address(addr: &Vec<u8>) -> Address {
@@ -33,7 +35,7 @@ pub fn near_account_bytes_to_eth_address(addr: &Vec<u8>) -> Address {
     Address::from_slice(&addr[0..20])
 }
 
-pub fn near_account_id_to_internal_address(account_id: &str) -> Vec<u8> {
+pub fn near_account_id_to_internal_address(account_id: &str) -> [u8; 20] {
     eth_account_to_internal_address(near_account_id_to_eth_address(account_id))
 }
 

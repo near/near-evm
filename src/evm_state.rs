@@ -8,32 +8,32 @@ pub trait EvmState {
     fn code_at(&self, address: &Address) -> Option<Vec<u8>>;
     fn set_code(&mut self, address: &Address, bytecode: &Vec<u8>);
 
-    fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]>;
+    fn _set_balance(&mut self, address: [u8; 20], balance: [u8; 32]) -> Option<[u8; 32]>;
     fn set_balance(&mut self, address: &Address, balance: U256) -> Option<U256> {
         let mut bin = [0u8; 32];
         balance.to_big_endian(&mut bin);
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self._set_balance(&internal_addr, bin).map(|v| v.into())
+        self._set_balance(internal_addr, bin).map(|v| v.into())
     }
 
-    fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32];
+    fn _balance_of(&self, address: [u8; 20]) -> [u8; 32];
     fn balance_of(&self, address: &Address) -> U256 {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self._balance_of(&internal_addr).into()
+        self._balance_of(internal_addr).into()
     }
 
-    fn _set_nonce(&mut self, address: &Vec<u8>, nonce: [u8; 32]) -> Option<[u8; 32]>;
+    fn _set_nonce(&mut self, address: [u8; 20], nonce: [u8; 32]) -> Option<[u8; 32]>;
     fn set_nonce(&mut self, address: &Address, nonce: U256) -> Option<U256> {
         let mut bin = [0u8; 32];
         nonce.to_big_endian(&mut bin);
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self._set_balance(&internal_addr, bin).map(|v| v.into())
+        self._set_balance(internal_addr, bin).map(|v| v.into())
     }
 
-    fn _nonce_of(&self, address: &Vec<u8>) -> [u8; 32];
+    fn _nonce_of(&self, address: [u8; 20]) -> [u8; 32];
     fn nonce_of(&self, address: &Address) -> U256 {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self._nonce_of(&internal_addr).into()
+        self._nonce_of(internal_addr).into()
     }
 
     fn next_nonce(&mut self, address: &Address)  -> U256 {
@@ -74,31 +74,31 @@ pub trait EvmState {
 
 #[derive(Default)]
 pub struct StateStore {
-    pub code: HashMap<Vec<u8>, Vec<u8>>,
-    pub balances: HashMap<Vec<u8>, [u8; 32]>,
-    pub nonces: HashMap<Vec<u8>, [u8; 32]>,
-    pub storages: HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>,
+    pub code: HashMap<[u8; 20], Vec<u8>>,
+    pub balances: HashMap<[u8; 20], [u8; 32]>,
+    pub nonces: HashMap<[u8; 20], [u8; 32]>,
+    pub storages: HashMap<[u8; 20], HashMap<Vec<u8>, Vec<u8>>>,
 }
 
 impl StateStore {
-    pub fn commit_code(&mut self, other: &HashMap<Vec<u8>, Vec<u8>>) {
+    pub fn commit_code(&mut self, other: &HashMap<[u8; 20], Vec<u8>>) {
         self.code
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
-    pub fn commit_balances(&mut self, other: &HashMap<Vec<u8>, [u8; 32]>) {
+    pub fn commit_balances(&mut self, other: &HashMap<[u8; 20], [u8; 32]>) {
         self.balances
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
-    pub fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
+    pub fn commit_storages(&mut self, other: &HashMap<[u8; 20], HashMap<Vec<u8>, Vec<u8>>>) {
         for (k, v) in other.iter() {
             match self.storages.get_mut(k) {
                 Some(contract_storage) => {
                     contract_storage.extend(v.into_iter().map(|(k, v)| (k.clone(), v.clone())))
                 }
                 None => {
-                    self.storages.insert(k.to_vec(), v.clone());
+                    self.storages.insert(*k, v.clone());
                 }
             }
         }
@@ -116,14 +116,14 @@ impl SubState<'_> {
         SubState { msg_sender, state, parent }
     }
 
-    pub fn contract_storage(&self, address: &Vec<u8>) -> Option<&HashMap<Vec<u8>, Vec<u8>>> {
-        self.state.storages.get(&address.to_vec())
+    pub fn contract_storage(&self, address: [u8; 20]) -> Option<&HashMap<Vec<u8>, Vec<u8>>> {
+        self.state.storages.get(&address)
     }
 
-    pub fn mut_contract_storage(&mut self, address: &Vec<u8>) -> &mut HashMap<Vec<u8>, Vec<u8>> {
+    pub fn mut_contract_storage(&mut self, address: [u8; 20]) -> &mut HashMap<Vec<u8>, Vec<u8>> {
         self.state
             .storages
-            .entry(address.to_vec())
+            .entry(address)
             .or_insert(HashMap::default())
     }
 }
@@ -139,34 +139,34 @@ impl EvmState for SubState<'_> {
 
     fn set_code(&mut self, address: &Address, bytecode: &Vec<u8>) {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self.state.code.insert(internal_addr.to_vec(), bytecode.to_vec());
+        self.state.code.insert(internal_addr, bytecode.to_vec());
     }
 
-    fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32] {
+    fn _balance_of(&self, address: [u8; 20]) -> [u8; 32] {
         self.state
             .balances
-            .get(address)
+            .get(&address)
             .map_or_else(|| self.parent._balance_of(address), |k| k.clone())
     }
 
-    fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]> {
-        self.state.balances.insert(address.to_vec(), balance)
+    fn _set_balance(&mut self, address: [u8; 20], balance: [u8; 32]) -> Option<[u8; 32]> {
+        self.state.balances.insert(address, balance)
     }
 
-    fn _nonce_of(&self, address: &Vec<u8>) -> [u8; 32] {
+    fn _nonce_of(&self, address: [u8; 20]) -> [u8; 32] {
         self.state
             .nonces
-            .get(address)
+            .get(&address)
             .map_or_else(|| self.parent._nonce_of(address), |k| k.clone())
     }
 
-    fn _set_nonce(&mut self, address: &Vec<u8>, nonce: [u8; 32]) -> Option<[u8; 32]> {
-        self.state.nonces.insert(address.to_vec(), nonce)
+    fn _set_nonce(&mut self, address: [u8; 20], nonce: [u8; 32]) -> Option<[u8; 32]> {
+        self.state.nonces.insert(address, nonce)
     }
 
     fn read_contract_storage(&self, address: &Address, key: &Vec<u8>) -> Option<Vec<u8>> {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self.contract_storage(&internal_addr).map_or_else(
+        self.contract_storage(internal_addr).map_or_else(
             || self.parent.read_contract_storage(address, key),
             |s| s.get(key).map(|v| v.clone()),
         )
@@ -179,7 +179,7 @@ impl EvmState for SubState<'_> {
         value: &Vec<u8>,
     ) -> Option<Vec<u8>> {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self.mut_contract_storage(&internal_addr)
+        self.mut_contract_storage(internal_addr)
             .insert(key.to_vec(), value.to_vec())
     }
 

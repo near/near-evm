@@ -39,30 +39,30 @@ impl EvmState for EvmContract {
     // Default code of None
     fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self.code.get(&internal_addr)
+        self.code.get(&internal_addr.to_vec())
     }
 
     fn set_code(&mut self, address: &Address, bytecode: &Vec<u8>) {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self.code.insert(&internal_addr, bytecode);
+        self.code.insert(&internal_addr.to_vec(), bytecode);
     }
 
-    fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]> {
-        self.balances.insert(address, &balance)
+    fn _set_balance(&mut self, address: [u8; 20], balance: [u8; 32]) -> Option<[u8; 32]> {
+        self.balances.insert(&address.to_vec(), &balance)
     }
 
     // default balance of 0
-    fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32] {
-        self.balances.get(address).unwrap_or([0u8; 32])
+    fn _balance_of(&self, address: [u8; 20]) -> [u8; 32] {
+        self.balances.get(&address.to_vec()).unwrap_or([0u8; 32])
     }
 
-    fn _set_nonce(&mut self, address: &Vec<u8>, nonce: [u8; 32]) -> Option<[u8; 32]> {
-        self.nonces.insert(address, &nonce)
+    fn _set_nonce(&mut self, address: [u8; 20], nonce: [u8; 32]) -> Option<[u8; 32]> {
+        self.nonces.insert(&address.to_vec(), &nonce)
     }
 
     // default nonce of 0
-    fn _nonce_of(&self, address: &Vec<u8>) -> [u8; 32] {
-        self.nonces.get(address).unwrap_or([0u8; 32])
+    fn _nonce_of(&self, address: [u8; 20]) -> [u8; 32] {
+        self.nonces.get(&address.to_vec()).unwrap_or([0u8; 32])
     }
 
     // Default storage of None
@@ -187,38 +187,37 @@ impl EvmContract {
 
 impl EvmContract {
 
-    fn commit_code(&mut self, other: &HashMap<Vec<u8>, Vec<u8>>) {
+    fn commit_code(&mut self, other: &HashMap<[u8; 20], Vec<u8>>) {
         self.code
-            .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+            .extend(other.into_iter().map(|(k, v)| (k.to_vec(), v.clone())));
     }
 
-    fn commit_balances(&mut self, other: &HashMap<Vec<u8>, [u8; 32]>) {
+    fn commit_balances(&mut self, other: &HashMap<[u8; 20], [u8; 32]>) {
         self.balances
-            .extend(other
-                       .into_iter()
-                       .map(|(k, v)| (k.clone(), v.clone())));
+            .extend(other.into_iter()
+                         .map(|(k, v)| (k.to_vec(), v.clone())));
     }
 
-    fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
+    fn commit_storages(&mut self, other: &HashMap<[u8; 20], HashMap<Vec<u8>, Vec<u8>>>) {
         for (k, v) in other.iter() {
-            let mut storage = self._contract_storage(k);
+            let mut storage = self._contract_storage(*k);
             storage.extend(v.into_iter().map(|(k, v)| (k.clone(), v.clone())));
-            self.storages.insert(k, &storage);
+            self.storages.insert(&k.to_vec(), &storage);
         }
     }
 
-    fn _contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>> {
+    fn _contract_storage(&self, address: [u8; 20]) -> NearMap<Vec<u8>, Vec<u8>> {
         self.storages
-            .get(address)
+            .get(&address.to_vec())
             .unwrap_or_else(|| self.get_new_contract_storage(address))
     }
 
     fn contract_storage(&self, address: &Address) -> NearMap<Vec<u8>, Vec<u8>> {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self._contract_storage(&internal_addr)
+        self._contract_storage(internal_addr)
     }
 
-    fn get_new_contract_storage(&self, address: &Vec<u8>) -> NearMap<Vec<u8>, Vec<u8>> {
+    fn get_new_contract_storage(&self, address: [u8; 20]) -> NearMap<Vec<u8>, Vec<u8>> {
         let storage_prefix = prefix_for_contract_storage(&address);
         let storage = NearMap::<Vec<u8>, Vec<u8>>::new(storage_prefix);
         storage

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use vm::GasLeft;
+use ethereum_types::U256;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
@@ -21,9 +22,9 @@ pub mod utils;
 #[near_bindgen_macro]
 #[derive(BorshDeserialize, BorshSerialize, Default)]
 pub struct EvmContract {
-    pub code: NearMap<Vec<u8>, Vec<u8>>,
-    pub balances: NearMap<Vec<u8>, u64>,
-    pub storages: NearMap<Vec<u8>, NearMap<Vec<u8>, Vec<u8>>>,
+    code: NearMap<Vec<u8>, Vec<u8>>,
+    balances: NearMap<Vec<u8>, [u8; 32]>,
+    storages: NearMap<Vec<u8>, NearMap<Vec<u8>, Vec<u8>>>,
 }
 
 impl EvmState for EvmContract {
@@ -35,12 +36,22 @@ impl EvmState for EvmContract {
         self.code.insert(address, bytecode);
     }
 
-    fn set_balance(&mut self, address: &Vec<u8>, balance: u64) -> Option<u64> {
+    fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]> {
         self.balances.insert(address, &balance)
     }
 
-    fn balance_of(&self, address: &Vec<u8>) -> u64 {
-        self.balances.get(address).unwrap_or(0)
+    fn set_balance(&mut self, address: &Vec<u8>, balance: U256) -> Option<U256> {
+        let mut bin = [0u8; 32];
+        balance.to_big_endian(&mut bin);
+        self._set_balance(address, bin).map(|v| v.into())
+    }
+
+    fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32] {
+        self.balances.get(address).unwrap_or([0u8; 32])
+    }
+
+    fn balance_of(&self, address: &Vec<u8>) -> U256 {
+        self._balance_of(address).into()
     }
 
     fn read_contract_storage(&self, address: &Vec<u8>, key: &Vec<u8>) -> Option<Vec<u8>> {
@@ -78,7 +89,11 @@ impl EvmContract {
 
         self.set_code(&contract_address, &code);
 
-        let opt = self.call_contract_internal(&contract_address, "".to_string());
+        let val = attached_deposit_as_u256();
+        let opt = self.call_contract_internal(
+            val,
+            &contract_address,
+            "".to_string());
 
         match opt {
             Some(data) => {
@@ -98,28 +113,40 @@ impl EvmContract {
 
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = contract_address.into_bytes();
+        let val = attached_deposit_as_u256();
 
-        let result = self.call_contract_internal(&contract_address, encoded_input);
+        let result = self.call_contract_internal(val, &contract_address, encoded_input);
 
         match result {
             Some(v) => hex::encode(v),
             None => panic!("internal command returned None"),
         }
     }
+
+    pub fn add_near(&mut self, destination_address: String) {
+        let val = attached_deposit_as_u256();
+
+    }
+
+    pub fn retrieve_near(&mut self, destination_address: String) {
+
+    }
 }
 
 impl EvmContract {
-    pub fn commit_code(&mut self, other: &HashMap<Vec<u8>, Vec<u8>>) {
+    fn commit_code(&mut self, other: &HashMap<Vec<u8>, Vec<u8>>) {
         self.code
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
-    pub fn commit_balances(&mut self, other: &HashMap<Vec<u8>, u64>) {
+    fn commit_balances(&mut self, other: &HashMap<Vec<u8>, [u8; 32]>) {
         self.balances
-            .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+            .extend(other
+                       .into_iter()
+                       .map(|(k, v)| (k.clone(), v.clone())));
     }
 
-    pub fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
+    fn commit_storages(&mut self, other: &HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>) {
         for (k, v) in other.iter() {
             let mut storage = self.contract_storage(k);
             storage.extend(v.into_iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -141,6 +168,7 @@ impl EvmContract {
 
     fn call_contract_internal(
         &mut self,
+        value: Option<U256>,
         contract_address: &Vec<u8>,
         encoded_input: String,
     ) -> Option<Vec<u8>> {
@@ -151,6 +179,7 @@ impl EvmContract {
         // run
         let result = interpreter::call(
             self,
+            value,
             0, // call-stack depth
             contract_address,
             &input,
@@ -169,5 +198,17 @@ impl EvmContract {
             }) => Some(data.to_vec()),
             None => None,
         }
+    }
+}
+
+fn attached_deposit_as_u256() -> Option<U256> {
+    let attached = env::attached_deposit();
+    if attached == 0 {
+        None
+    } else {
+        let mut bin = [0u8; 32];
+        bin[16..].copy_from_slice(&attached.to_be_bytes());
+
+        Some(bin.into())
     }
 }

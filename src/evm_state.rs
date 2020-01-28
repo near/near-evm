@@ -1,10 +1,16 @@
 use std::collections::HashMap;
 
+use ethereum_types::U256;
+
 pub trait EvmState {
     fn code_at(&self, address: &Vec<u8>) -> Option<Vec<u8>>;
     fn set_code(&mut self, address: &Vec<u8>, bytecode: &Vec<u8>);
-    fn set_balance(&mut self, address: &Vec<u8>, balance: u64) -> Option<u64>;
-    fn balance_of(&self, address: &Vec<u8>) -> u64;
+
+    fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]>;
+    fn set_balance(&mut self, address: &Vec<u8>, balance: U256) -> Option<U256>;
+
+    fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32];
+    fn balance_of(&self, address: &Vec<u8>) -> U256;
 
     fn read_contract_storage(&self, address: &Vec<u8>, key: &Vec<u8>) -> Option<Vec<u8>>;
     fn set_contract_storage(
@@ -16,7 +22,7 @@ pub trait EvmState {
 
     fn commit_changes(&mut self, other: &StateStore);
 
-    fn add_balance(&mut self, address: &Vec<u8>, incr: u64) -> Option<u64> {
+    fn add_balance(&mut self, address: &Vec<u8>, incr: U256) -> Option<U256> {
         let balance = self.balance_of(address);
         let new_balance = balance
             .checked_add(incr)
@@ -24,7 +30,7 @@ pub trait EvmState {
         self.set_balance(address, new_balance)
     }
 
-    fn sub_balance(&mut self, address: &Vec<u8>, decr: u64) -> Option<u64> {
+    fn sub_balance(&mut self, address: &Vec<u8>, decr: U256) -> Option<U256> {
         let balance = self.balance_of(address);
         let new_balance = balance
             .checked_sub(decr)
@@ -36,7 +42,7 @@ pub trait EvmState {
 #[derive(Default)]
 pub struct StateStore {
     pub code: HashMap<Vec<u8>, Vec<u8>>,
-    pub balances: HashMap<Vec<u8>, u64>,
+    pub balances: HashMap<Vec<u8>, [u8; 32]>,
     pub storages: HashMap<Vec<u8>, HashMap<Vec<u8>, Vec<u8>>>,
 }
 
@@ -46,7 +52,7 @@ impl StateStore {
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
-    pub fn commit_balances(&mut self, other: &HashMap<Vec<u8>, u64>) {
+    pub fn commit_balances(&mut self, other: &HashMap<Vec<u8>, [u8; 32]>) {
         self.balances
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
@@ -99,15 +105,25 @@ impl EvmState for SubState<'_> {
         self.state.code.insert(address.to_vec(), bytecode.to_vec());
     }
 
-    fn balance_of(&self, address: &Vec<u8>) -> u64 {
+    fn _balance_of(&self, address: &Vec<u8>) -> [u8; 32] {
         self.state
             .balances
             .get(address)
-            .map_or_else(|| self.parent.balance_of(address), |k| k.clone())
+            .map_or_else(|| self.parent._balance_of(address), |k| k.clone())
     }
 
-    fn set_balance(&mut self, address: &Vec<u8>, balance: u64) -> Option<u64> {
+    fn balance_of(&self, address: &Vec<u8>) -> U256 {
+        self._balance_of(address).into()
+    }
+
+    fn _set_balance(&mut self, address: &Vec<u8>, balance: [u8; 32]) -> Option<[u8; 32]> {
         self.state.balances.insert(address.to_vec(), balance)
+    }
+
+    fn set_balance(&mut self, address: &Vec<u8>, balance: U256) -> Option<U256> {
+        let mut bin = [0u8; 32];
+        balance.to_big_endian(&mut bin);
+        self._set_balance(address, bin).map(|v| v.into())
     }
 
     fn read_contract_storage(&self, address: &Vec<u8>, key: &Vec<u8>) -> Option<Vec<u8>> {

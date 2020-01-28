@@ -120,7 +120,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         _gas: &U256,
         _sender_address: &Address,
         receive_address: &Address,
-        _value: Option<U256>,
+        value: Option<U256>,
         data: &[u8],
         code_address: &Address,
         call_type: CallType,
@@ -134,6 +134,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::Call => interpreter::call(
                 self.sub_state,
+                value,
                 self.depth,
                 &receive_address[..].to_vec(),
                 &data.to_vec(),

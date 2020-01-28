@@ -30,7 +30,7 @@ pub struct EvmContract {
 
 #[ext_contract]
 pub trait Callback {
-    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>);
+    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Vec<u8>);
 }
 
 impl EvmState for EvmContract {
@@ -163,20 +163,22 @@ impl EvmContract {
             .then(
                 callback::finalize_retrieve_near(
                     &addr,
+                    &amount.to_be_bytes().to_vec(),
                     &env::current_account_id(),
                     0,
                     10u64.pow(9))
             );
     }
 
-    #[callback_args(amount)]
-    pub fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: Balance) {
-        // panics if called from outside
+    pub fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Vec<u8>) {
+        let mut bin = [0u8; 16];
+        bin.copy_from_slice(&amount[..]);
+        // panics if called externally
         assert_eq!(
             env::current_account_id(),
             env::predecessor_account_id());
         // panics if insufficient balance
-        self.sub_balance(addr, balance_to_u256(&amount));
+        self.sub_balance(addr, balance_to_u256(&Balance::from_be_bytes(bin)));
     }
 }
 

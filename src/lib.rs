@@ -5,9 +5,9 @@ use ethereum_types::U256;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use near_vm_logic::types::Balance;
+use near_vm_logic::types::{AccountId, Balance};
 use near_bindgen::collections::Map as NearMap;
-use near_bindgen::{env, near_bindgen as near_bindgen_macro, Promise};
+use near_bindgen::{callback_args, env, ext_contract, near_bindgen as near_bindgen_macro, Promise};
 
 use crate::evm_state::{EvmState, StateStore};
 use crate::utils::prefix_for_contract_storage;
@@ -26,6 +26,11 @@ pub struct EvmContract {
     code: NearMap<Vec<u8>, Vec<u8>>,
     balances: NearMap<Vec<u8>, [u8; 32]>,
     storages: NearMap<Vec<u8>, NearMap<Vec<u8>, Vec<u8>>>,
+}
+
+#[ext_contract]
+pub trait Callback {
+    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Balance);
 }
 
 impl EvmState for EvmContract {
@@ -128,6 +133,11 @@ impl EvmContract {
         }
     }
 
+    pub fn balance(&self, address: AccountId) -> Balance {
+        let addr = utils::sender_name_to_internal_address(&address);
+        u256_to_balance(&self.balance_of(&addr))
+    }
+
     pub fn add_near(&mut self) -> Balance {
         let val = attached_deposit_as_u256_opt().expect("Did not attach value");
         let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
@@ -136,25 +146,39 @@ impl EvmContract {
         u256_to_balance(&self.balance_of(&addr))
     }
 
-    pub fn retrieve_near(&mut self, destination_address: String, amount: Balance) -> Balance {
+    pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) -> Balance {
         let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
 
-        // panics if insufficient
-        self.sub_balance(&addr, balance_to_u256(&amount));
+        if u256_to_balance(&self.balance_of(&addr)) < amount {
+            panic!("insufficient funds");
+        }
 
-        Promise::new(env::current_account_id())
-            .transfer(amount);
+        Promise::new(recipient)
+            .transfer(amount)
+            .then(
+                callback::finalize_retrieve_near(
+                    &addr,
+                    &amount,
+                    &env::current_account_id(),
+                    0,
+                    env::prepaid_gas())
+            );
 
         u256_to_balance(&self.balance_of(&addr))
     }
 
-    pub fn balance(&self, address: String) -> Balance {
-        let addr = utils::sender_name_to_internal_address(&address);
-        u256_to_balance(&self.balance_of(&addr))
+    #[callback_args(addr, amount)]
+    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Balance) {
+        // panics if called from outside
+        // panics if insufficient balance
+        assert_eq!(env::current_account_id(), env::predecessor_account_id());
+        self.sub_balance(addr, balance_to_u256(amount));
     }
+
 }
 
 impl EvmContract {
+
     fn commit_code(&mut self, other: &HashMap<Vec<u8>, Vec<u8>>) {
         self.code
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));

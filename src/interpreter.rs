@@ -6,7 +6,7 @@ use vm::{ActionParams, ActionValue, CallType, Ext, GasLeft, Schedule};
 
 use crate::evm_state::{EvmState, StateStore, SubState};
 use crate::near_ext::NearExt;
-use crate::utils::sender_as_eth;
+use crate::utils;
 
 pub fn deploy_code(state: &mut dyn EvmState, address: &Vec<u8>, code: &Vec<u8>) {
     state.set_code(address, code);
@@ -133,8 +133,8 @@ fn run_against_state(
 
     params.call_type = CallType::None;
     params.code = Some(Arc::new(code));
-    params.origin = sender_as_eth();
-    params.sender = params.origin;    // TODO: pass through sender
+    params.origin = utils::predecessor_as_eth();
+    params.sender = utils::internal_address_to_eth_account(sender);
     params.gas = U256::from(startgas);
     params.data = Some(input.to_vec());
     if let Some(val) = value {

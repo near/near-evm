@@ -85,7 +85,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     // TODO: sender vs origin
     fn origin_balance(&self) -> EvmResult<U256> {
-        self.balance(&utils::sender_as_eth())
+        self.balance(&utils::predecessor_as_eth())
     }
 
     fn balance(&self, address: &Address) -> EvmResult<U256> {

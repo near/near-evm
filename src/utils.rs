@@ -4,8 +4,8 @@ use keccak_hash::keccak;
 
 use near_bindgen::env;
 
-pub fn sender_as_eth() -> Address {
-    let mut sender = env::signer_account_id().into_bytes();
+pub fn predecessor_as_eth() -> Address {
+    let mut sender = env::predecessor_account_id().into_bytes();
     sender.resize(20, 0);
     Address::from_slice(&sender)
 }

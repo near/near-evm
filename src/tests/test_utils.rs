@@ -5,10 +5,10 @@ use crate::EvmContract;
 
 fn get_context(input: Vec<u8>) -> VMContext {
     VMContext {
-        current_account_id: "evm.near".to_string(),
-        signer_account_id: "bob.near".to_string(),
+        current_account_id: "zombies".to_string(),
+        signer_account_id: "owner1".to_string(),
         signer_account_pk: vec![0, 1, 2],
-        predecessor_account_id: "carol.near".to_string(),
+        predecessor_account_id: "owner1".to_string(),
         input,
         block_index: 0,
         block_timestamp: 0,
@@ -23,14 +23,14 @@ fn get_context(input: Vec<u8>) -> VMContext {
     }
 }
 
-pub fn run_test<T>(test: T) -> ()
+pub fn run_test<T>(attached_deposit: u128, test: T) -> ()
 where
     T: FnOnce(&mut EvmContract) -> (),
 {
     let mut context = get_context(vec![]);
-    context.signer_account_id = "owner1".to_owned();
+    context.attached_deposit = attached_deposit;
+    context.account_balance = attached_deposit;
     testing_env!(context);
-
     let mut contract = EvmContract::default();
     test(&mut contract)
 }

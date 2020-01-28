@@ -30,7 +30,7 @@ pub struct EvmContract {
 
 #[ext_contract]
 pub trait Callback {
-    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Balance);
+    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>);
 }
 
 impl EvmState for EvmContract {
@@ -142,39 +142,42 @@ impl EvmContract {
         let val = attached_deposit_as_u256_opt().expect("Did not attach value");
         let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
 
+
         self.add_balance(&addr, val);
         u256_to_balance(&self.balance_of(&addr))
     }
 
-    pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) -> Balance {
+    pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) {
         let addr = utils::sender_name_to_internal_address(&env::predecessor_account_id());
 
         if u256_to_balance(&self.balance_of(&addr)) < amount {
             panic!("insufficient funds");
         }
 
+        /*
+        panicked at 'called `Result::unwrap()` on an `Err` value: HostError(GasExceeded)',
+        near-bindgen/src/environment/mocked_blockchain.rs:252:9
+        */
         Promise::new(recipient)
             .transfer(amount)
             .then(
                 callback::finalize_retrieve_near(
                     &addr,
-                    &amount,
                     &env::current_account_id(),
                     0,
-                    env::prepaid_gas())
+                    10u64.pow(9))
             );
-
-        u256_to_balance(&self.balance_of(&addr))
     }
 
-    #[callback_args(addr, amount)]
-    fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: &Balance) {
+    #[callback_args(amount)]
+    pub fn finalize_retrieve_near(&mut self, addr: &Vec<u8>, amount: Balance) {
         // panics if called from outside
+        assert_eq!(
+            env::current_account_id(),
+            env::predecessor_account_id());
         // panics if insufficient balance
-        assert_eq!(env::current_account_id(), env::predecessor_account_id());
-        self.sub_balance(addr, balance_to_u256(amount));
+        self.sub_balance(addr, balance_to_u256(&amount));
     }
-
 }
 
 impl EvmContract {

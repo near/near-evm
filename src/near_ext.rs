@@ -100,7 +100,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn create(
         &mut self,
         _gas: &U256,
-        _value: &U256,
+        value: &U256,
         code: &[u8],
         address_type: CreateContractAddress,
         _trap: bool,
@@ -125,10 +125,13 @@ impl<'a> vm::Ext for NearExt<'a> {
         );
 
         interpreter::deploy_code(self.sub_state, &addr, &code.to_vec());
-
-        // https://github.com/paritytech/parity-ethereum/blob/master/ethcore/vm/src/ext.rs#L57-L64
-        not_implemented("create");
-        unimplemented!()
+        self.sub_state.sub_balance(&addr, *value);
+        self.sub_state.add_balance(&addr, *value);
+        Ok(ContractCreateResult::Created(addr, 0.into()))
+        //
+        // // https://github.com/paritytech/parity-ethereum/blob/master/ethcore/vm/src/ext.rs#L57-L64
+        // not_implemented("create");
+        // unimplemented!()
     }
 
     /// Message call.

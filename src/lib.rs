@@ -89,7 +89,7 @@ impl EvmState for EvmContract {
 #[near_bindgen_macro]
 impl EvmContract {
     // TODO: this is UNSAFE. need to calculate contract address rather than pass in
-    pub fn deploy_code(&mut self, contract_address: AccountId, bytecode: String) {
+    pub fn deploy_code(&mut self, contract_address: AccountId, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
         let contract_address = utils::near_account_id_to_eth_address(&contract_address);
 
@@ -116,9 +116,9 @@ impl EvmContract {
                         "ok deployed {} bytes of code at address {}",
                         data.len(),
                         hex::encode(&contract_address)
-                    )
-                    .as_bytes(),
+                    ).as_bytes()
                 );
+                hex::encode(&contract_address)
             }
             None => panic!("init failed"),
         }

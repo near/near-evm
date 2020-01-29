@@ -5,6 +5,7 @@ use keccak_hash::keccak;
 use near_bindgen::env;
 
 // TODO: clean up all these
+// TODO: proper keccak[12..] for addresses
 
 pub fn predecessor_as_eth() -> Address {
     let mut sender = env::predecessor_account_id().into_bytes();

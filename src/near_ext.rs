@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::collections::HashMap;
 
 use ethereum_types::{Address, H256, U256};
 use parity_bytes::Bytes;
@@ -125,13 +126,10 @@ impl<'a> vm::Ext for NearExt<'a> {
         );
 
         interpreter::deploy_code(self.sub_state, &addr, &code.to_vec());
+        // will panic if insufficient balance
         self.sub_state.sub_balance(&addr, *value);
         self.sub_state.add_balance(&addr, *value);
         Ok(ContractCreateResult::Created(addr, 0.into()))
-        //
-        // // https://github.com/paritytech/parity-ethereum/blob/master/ethcore/vm/src/ext.rs#L57-L64
-        // not_implemented("create");
-        // unimplemented!()
     }
 
     /// Message call.
@@ -262,11 +260,16 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Should be called when contract commits suicide.
     /// Address to which funds should be refunded.
-    fn suicide(&mut self, _refund_address: &Address) -> EvmResult<()> {
-        // TODO: implement.
-        //       Does suicide delete or preserve storage (delete I think?)
-        not_implemented("suicide");
-        unimplemented!()
+    /// Deletes code, moves balance
+    fn suicide(&mut self, refund_address: &Address) -> EvmResult<()> {
+        // if we call `remove` on this, it won't be committed later
+        // so instead we replace it with an empty vector
+        self.sub_state.state.code.insert(self.context_addr.0, vec![]);
+        let balance = self.sub_state.balance_of(&self.context_addr);
+        self.sub_state.state.storages.insert(self.context_addr.0, HashMap::default());
+        self.sub_state.add_balance(refund_address, balance);
+        self.sub_state.sub_balance(&self.context_addr, balance);
+        Ok(())
     }
 
     /// Returns schedule.

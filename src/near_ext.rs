@@ -1,7 +1,8 @@
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use ethereum_types::{Address, H256, U256};
+use keccak_hash::keccak;
 use parity_bytes::Bytes;
 use vm::{
     CallType, ContractCreateResult, CreateContractAddress, EnvInfo, Error as VmError, GasLeft,
@@ -49,19 +50,22 @@ fn not_implemented(name: &str) {
 
 impl<'a> vm::Ext for NearExt<'a> {
     /// Returns the storage value for a given key if reversion happens on the current transaction.
-    fn initial_storage_at(&self, _key: &H256) -> EvmResult<H256> {
-        not_implemented("initial_storage_at");
-        unimplemented!()
+    fn initial_storage_at(&self, key: &H256) -> EvmResult<H256> {
+        let raw_val = self
+            .sub_state
+            .parent // Read from the unmodified parent state
+            .read_contract_storage(&self.context_addr, key.0)
+            .unwrap_or([0u8; 32]); // default to an empty value
+        Ok(H256(raw_val))
     }
 
     /// Returns a value for given key.
     fn storage_at(&self, key: &H256) -> EvmResult<H256> {
         let raw_val = self
             .sub_state
-            .read_contract_storage(&self.context_addr, &key.0.to_vec())
-            .map(|v| v.clone())
-            .unwrap_or(vec![0; 32]); // default to an empty vec of correct length
-        Ok(H256::from_slice(&raw_val))
+            .read_contract_storage(&self.context_addr, key.0)
+            .unwrap_or([0u8; 32]); // default to an empty value
+        Ok(H256(raw_val))
     }
 
     /// Stores a value for given key.
@@ -70,7 +74,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             return Err(VmError::MutableCallInStaticContext);
         }
         self.sub_state
-            .set_contract_storage(&self.context_addr, &key.0.to_vec(), &value.0.to_vec());
+            .set_contract_storage(&self.context_addr, key.0, value.0);
         Ok(())
     }
 
@@ -118,12 +122,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             nonce = self.sub_state.next_nonce(&self.context_addr);
         }
 
-        let (addr, _) = utils::evm_contract_address(
-            address_type,
-            &self.context_addr,
-            &nonce,
-            code
-        );
+        let (addr, _) = utils::evm_contract_address(address_type, &self.context_addr, &nonce, code);
 
         interpreter::deploy_code(self.sub_state, &addr, &code.to_vec());
         // will panic if insufficient balance
@@ -148,7 +147,6 @@ impl<'a> vm::Ext for NearExt<'a> {
         call_type: CallType,
         _trap: bool,
     ) -> Result<MessageCallResult, TrapKind> {
-
         if self.is_static() && call_type != CallType::StaticCall {
             panic!("MutableCallInStaticContext")
         }
@@ -213,19 +211,22 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Returns code at given address
     fn extcode(&self, address: &Address) -> EvmResult<Option<Arc<Bytes>>> {
-        let code = self
-            .sub_state
-            .code_at(address)
-            .map(|c| Arc::new(c));
+        let code = self.sub_state.code_at(address).map(|c| Arc::new(c));
         Ok(code)
     }
 
     /// Returns code hash at given address
-    fn extcodehash(&self, _address: &Address) -> EvmResult<Option<H256>> {
-        not_implemented("extcodehash");
-        // NOTE: only used by constantinople's EXTCODEHASH
-        // FIXME: implement
-        unimplemented!()
+    fn extcodehash(&self, address: &Address) -> EvmResult<Option<H256>> {
+        let code_opt = self.sub_state.code_at(address);
+        let code = match code_opt {
+            Some(code) => code,
+            None => return Ok(None),
+        };
+        if code.len() == 0 {
+            return Ok(None);
+        }
+
+        return Ok(Some(keccak(code)));
     }
 
     /// Returns code size at given address
@@ -264,9 +265,15 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn suicide(&mut self, refund_address: &Address) -> EvmResult<()> {
         // if we call `remove` on this, it won't be committed later
         // so instead we replace it with an empty vector
-        self.sub_state.state.code.insert(self.context_addr.0, vec![]);
+        self.sub_state
+            .state
+            .code
+            .insert(self.context_addr.0, vec![]);
         let balance = self.sub_state.balance_of(&self.context_addr);
-        self.sub_state.state.storages.insert(self.context_addr.0, HashMap::default());
+        self.sub_state
+            .state
+            .storages
+            .insert(self.context_addr.0, HashMap::default());
         self.sub_state.add_balance(refund_address, balance);
         self.sub_state.sub_balance(&self.context_addr, balance);
         Ok(())
@@ -291,16 +298,11 @@ impl<'a> vm::Ext for NearExt<'a> {
     }
 
     /// Increments sstore refunds counter.
-    fn add_sstore_refund(&mut self, _value: usize) {
-        not_implemented("add_sstore_refund");
-        unimplemented!()
-    }
+    fn add_sstore_refund(&mut self, _value: usize) {}
 
     /// Decrements sstore refunds counter.
-    fn sub_sstore_refund(&mut self, _value: usize) {
-        not_implemented("sub_sstore_refund");
-        unimplemented!()
-    }
+    /// Left as NOP as evm gas is not metered
+    fn sub_sstore_refund(&mut self, _value: usize) {}
 
     /// Decide if any more operations should be traced. Passthrough for the VM trace.
     fn trace_next_instruction(&mut self, _pc: usize, _instruction: u8, _current_gas: U256) -> bool {

@@ -14,7 +14,7 @@ pub fn deploy_code(state: &mut dyn EvmState, address: &Address, code: &Vec<u8>) 
 
 pub fn call(
     state: &mut dyn EvmState,
-    sender: &Address,            // TODO: change this all to address
+    sender: &Address, // TODO: change this all to address
     value: Option<U256>,
     call_stack_depth: usize,
     contract_address: &Address,
@@ -40,7 +40,16 @@ pub fn delegate_call(
     delegee: &Address,
     input: &Vec<u8>,
 ) -> Option<GasLeft> {
-    run_and_commit_if_success(state, sender, None, call_stack_depth, context, delegee, input, false)
+    run_and_commit_if_success(
+        state,
+        sender,
+        None,
+        call_stack_depth,
+        context,
+        delegee,
+        input,
+        false,
+    )
 }
 
 pub fn static_call(
@@ -140,12 +149,7 @@ fn run_against_state(
     if let Some(val) = value {
         params.value = ActionValue::Transfer(val)
     }
-    let mut ext = NearExt::new(
-        *state_address,
-        &mut sub_state,
-        call_stack_depth,
-        is_static,
-    );
+    let mut ext = NearExt::new(*state_address, &mut sub_state, call_stack_depth, is_static);
     ext.info.gas_limit = U256::from(startgas);
     ext.schedule = Schedule::new_constantinople();
 

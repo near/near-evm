@@ -29,13 +29,10 @@ fn get_zombies_by_owner(contract: &mut EvmContract, owner: Address) -> Vec<Uint>
 }
 
 #[test]
-fn test_send_and_retrieve() {
+fn test_send() {
     test_utils::run_test(100, |mut contract| {
         deploy_cryptozombies(&mut contract);
-        assert_eq!(
-            contract.balance("owner1".to_string()),
-            0
-        );
+        assert_eq!(contract.balance("owner1".to_string()), 0);
 
         contract.add_near();
 
@@ -44,10 +41,7 @@ fn test_send_and_retrieve() {
         //     "zombies".to_string(),
         //     100
         // );
-        assert_eq!(
-            contract.balance("owner1".to_string()),
-            100
-        );
+        assert_eq!(contract.balance("owner1".to_string()), 100);
 
         // contract.retrieve_near("owner1".to_string(), 100);
         // assert_eq!(
@@ -73,19 +67,28 @@ fn test_create_random_zombie() {
         deploy_cryptozombies(&mut contract);
 
         assert_eq!(
-            get_zombies_by_owner(&mut contract, utils::near_account_id_to_eth_address(&"owner1".to_string())),
+            get_zombies_by_owner(
+                &mut contract,
+                utils::near_account_id_to_eth_address(&"owner1".to_string())
+            ),
             []
         );
 
         create_random_zombie(&mut contract, "zomb1");
         assert_eq!(
-            get_zombies_by_owner(&mut contract, utils::near_account_id_to_eth_address(&"owner1".to_string())),
+            get_zombies_by_owner(
+                &mut contract,
+                utils::near_account_id_to_eth_address(&"owner1".to_string())
+            ),
             [Uint::from(0)]
         );
 
         create_random_zombie(&mut contract, "zomb2");
         assert_eq!(
-            get_zombies_by_owner(&mut contract, utils::near_account_id_to_eth_address(&"owner1".to_string())),
+            get_zombies_by_owner(
+                &mut contract,
+                utils::near_account_id_to_eth_address(&"owner1".to_string())
+            ),
             [Uint::from(0)]
         );
     });

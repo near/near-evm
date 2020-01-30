@@ -36,19 +36,19 @@ pub trait EvmState {
         self._nonce_of(internal_addr).into()
     }
 
-    fn next_nonce(&mut self, address: &Address)  -> U256 {
+    fn next_nonce(&mut self, address: &Address) -> U256 {
         let next = self.nonce_of(address) + 1;
         self.set_nonce(address, next);
         next
     }
 
-    fn read_contract_storage(&self, address: &Address, key: &Vec<u8>) -> Option<Vec<u8>>;
+    fn read_contract_storage(&self, address: &Address, key: [u8; 32]) -> Option<[u8; 32]>;
     fn set_contract_storage(
         &mut self,
         address: &Address,
-        key: &Vec<u8>,
-        value: &Vec<u8>,
-    ) -> Option<Vec<u8>>;
+        key: [u8; 32],
+        value: [u8; 32],
+    ) -> Option<[u8; 32]>;
 
     fn commit_changes(&mut self, other: &StateStore);
 
@@ -77,7 +77,7 @@ pub struct StateStore {
     pub code: HashMap<[u8; 20], Vec<u8>>,
     pub balances: HashMap<[u8; 20], [u8; 32]>,
     pub nonces: HashMap<[u8; 20], [u8; 32]>,
-    pub storages: HashMap<[u8; 20], HashMap<Vec<u8>, Vec<u8>>>,
+    pub storages: HashMap<[u8; 20], HashMap<[u8; 32], [u8; 32]>>,
 }
 
 impl StateStore {
@@ -91,7 +91,7 @@ impl StateStore {
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
-    pub fn commit_storages(&mut self, other: &HashMap<[u8; 20], HashMap<Vec<u8>, Vec<u8>>>) {
+    pub fn commit_storages(&mut self, other: &HashMap<[u8; 20], HashMap<[u8; 32], [u8; 32]>>) {
         for (k, v) in other.iter() {
             match self.storages.get_mut(k) {
                 Some(contract_storage) => {
@@ -112,15 +112,23 @@ pub struct SubState<'a> {
 }
 
 impl SubState<'_> {
-    pub fn new<'a>(msg_sender: &'a Address, state: &'a mut StateStore, parent: &'a dyn EvmState) -> SubState<'a> {
-        SubState { msg_sender, state, parent }
+    pub fn new<'a>(
+        msg_sender: &'a Address,
+        state: &'a mut StateStore,
+        parent: &'a dyn EvmState,
+    ) -> SubState<'a> {
+        SubState {
+            msg_sender,
+            state,
+            parent,
+        }
     }
 
-    pub fn contract_storage(&self, address: [u8; 20]) -> Option<&HashMap<Vec<u8>, Vec<u8>>> {
+    pub fn contract_storage(&self, address: [u8; 20]) -> Option<&HashMap<[u8; 32], [u8; 32]>> {
         self.state.storages.get(&address)
     }
 
-    pub fn mut_contract_storage(&mut self, address: [u8; 20]) -> &mut HashMap<Vec<u8>, Vec<u8>> {
+    pub fn mut_contract_storage(&mut self, address: [u8; 20]) -> &mut HashMap<[u8; 32], [u8; 32]> {
         self.state
             .storages
             .entry(address)
@@ -164,23 +172,22 @@ impl EvmState for SubState<'_> {
         self.state.nonces.insert(address, nonce)
     }
 
-    fn read_contract_storage(&self, address: &Address, key: &Vec<u8>) -> Option<Vec<u8>> {
+    fn read_contract_storage(&self, address: &Address, key: [u8; 32]) -> Option<[u8; 32]> {
         let internal_addr = utils::eth_account_to_internal_address(*address);
         self.contract_storage(internal_addr).map_or_else(
             || self.parent.read_contract_storage(address, key),
-            |s| s.get(key).map(|v| v.clone()),
+            |s| s.get(&key).map(|v| v.clone()),
         )
     }
 
     fn set_contract_storage(
         &mut self,
         address: &Address,
-        key: &Vec<u8>,
-        value: &Vec<u8>,
-    ) -> Option<Vec<u8>> {
+        key: [u8; 32],
+        value: [u8; 32],
+    ) -> Option<[u8; 32]> {
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self.mut_contract_storage(internal_addr)
-            .insert(key.to_vec(), value.to_vec())
+        self.mut_contract_storage(internal_addr).insert(key, value)
     }
 
     fn commit_changes(&mut self, other: &StateStore) {

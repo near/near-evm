@@ -70,6 +70,11 @@ pub trait EvmState {
             .expect("underflow during sub_balance");
         self.set_balance(address, new_balance)
     }
+
+    fn transfer_balance(&mut self, sender: &Address, recipient: &Address, amnt: U256) {
+        self.sub_balance(sender, amnt);
+        self.add_balance(recipient, amnt);
+    }
 }
 
 #[derive(Default)]

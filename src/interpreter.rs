@@ -21,7 +21,7 @@ pub fn deploy_code(
 
     if state.code_at(address).is_some() {
         panic!(format!(
-            "Contract exists at {}",
+            "Contract exists at {}. How did this happen?",
             hex::encode(address)
         ));
     }
@@ -189,7 +189,8 @@ fn run_against_state(
     params.gas = U256::from(startgas);
     params.data = Some(input.to_vec());
     if let Some(val) = value {
-        params.value = ActionValue::Transfer(val)
+        params.value = ActionValue::Transfer(val);
+        sub_state.transfer_balance(sender, state_address, val);
     }
     let mut ext = NearExt::new(*state_address, &mut sub_state, call_stack_depth, is_static);
     ext.info.gas_limit = U256::from(startgas);
@@ -199,6 +200,5 @@ fn run_against_state(
 
     // Run the code
     let result = instance.exec(&mut ext);
-
     (result.ok().unwrap().ok(), Some(store))
 }

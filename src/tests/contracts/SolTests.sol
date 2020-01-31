@@ -14,15 +14,24 @@ contract ExposesBalance {
 
 
 contract SolTests is ExposesBalance {
-  function deployNewGuy(uint256 _aNumber) public returns (address) {
-      SubContract _newGuy = new SubContract(_aNumber);
-      return address(_newGuy);
-  }
+
+    constructor() public payable {}
+
+    function () external payable {}
+
+    function deployNewGuy(uint256 _aNumber) public returns (address) {
+        SubContract _newGuy = new SubContract(_aNumber);
+        return address(_newGuy);
+    }
 }
 
 contract SubContract is ExposesBalance {
+
     uint256 public aNumber = 6;
-    constructor(uint256 _aNumber) public {
+
+    constructor(uint256 _aNumber) public payable {
       aNumber = _aNumber;
     }
+
+    function () external payable {}
 }

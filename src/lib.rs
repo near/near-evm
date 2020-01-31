@@ -103,6 +103,7 @@ impl EvmContract {
         );
 
         let val = attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
+        self.add_balance(&utils::predecessor_as_evm(), val);
 
         interpreter::deploy_code(self, &sender, val, 0, &contract_address, &code);
         hex::encode(&contract_address)
@@ -111,9 +112,13 @@ impl EvmContract {
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = hex::decode(&contract_address).expect("contract_address must be hex");
         let contract_address = Address::from_slice(&contract_address);
-        let val = attached_deposit_as_u256_opt();
 
-        let result = self.call_contract_internal(val, &contract_address, encoded_input);
+        let value = attached_deposit_as_u256_opt();
+        if let Some(val) = value {
+            self.add_balance(&utils::predecessor_as_evm(), val);
+        }
+
+        let result = self.call_contract_internal(value, &contract_address, encoded_input);
 
         match result {
             Some(v) => hex::encode(v),
@@ -149,7 +154,7 @@ impl EvmContract {
 
     pub fn add_near(&mut self) -> Balance {
         let val = attached_deposit_as_u256_opt().expect("Did not attach value");
-        let addr = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
+        let addr = &utils::predecessor_as_evm();
 
         self.add_balance(&addr, val);
         u256_to_balance(&self.balance_of(&addr))

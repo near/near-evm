@@ -66,3 +66,19 @@ fn test_internal_create() {
         assert_eq!(output, U256::from(8));
     })
 }
+
+#[test]
+fn test_contract_to_contract_transfers() {
+    test_utils::run_test(100, |contract| {
+        let test_addr = contract.deploy_code(TEST.to_string());
+        assert_eq!(contract.balance_of_evm_address(test_addr.clone()), 100);
+        //
+        // // This should increment the nonce of the deploying contract
+        // let (input, _) = soltest::functions::deploy_new_guy::call(0);
+        // let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
+        // let sub_addr = raw[24..].to_string();
+
+        // assert_eq!(contract.balance_of_evm_address(evm_acc), test_addr);
+
+    })
+}

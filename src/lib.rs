@@ -39,12 +39,12 @@ pub trait Callback {
 impl EvmState for EvmContract {
     // Default code of None
     fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
-        let internal_addr = utils::eth_account_to_internal_address(*address);
+        let internal_addr = utils::evm_account_to_internal_address(*address);
         self.code.get(&internal_addr.to_vec())
     }
 
     fn set_code(&mut self, address: &Address, bytecode: &Vec<u8>) {
-        let internal_addr = utils::eth_account_to_internal_address(*address);
+        let internal_addr = utils::evm_account_to_internal_address(*address);
         self.code.insert(&internal_addr.to_vec(), bytecode);
     }
 
@@ -83,6 +83,7 @@ impl EvmState for EvmContract {
     fn commit_changes(&mut self, other: &StateStore) {
         self.commit_code(&other.code);
         self.commit_balances(&other.balances);
+        self.commit_nonces(&other.nonces);
         self.commit_storages(&other.storages);
     }
 }
@@ -92,7 +93,7 @@ impl EvmContract {
     // TODO: make this use interpreter::deploy_code
     pub fn deploy_code(&mut self, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
-        let sender = utils::predecessor_as_eth();
+        let sender = utils::predecessor_as_evm();
         let nonce = self.next_nonce(&sender);
         let (contract_address, _) = utils::evm_contract_address(
             CreateContractAddress::FromSenderAndNonce,
@@ -101,7 +102,6 @@ impl EvmContract {
             &code
         );
 
-        // let internal_addr = utils::eth_account_to_internal_address(contract_address);
         let val = attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
 
         interpreter::deploy_code(self, &sender, val, 0, &contract_address, &code);
@@ -121,21 +121,42 @@ impl EvmContract {
         }
     }
 
-    pub fn balance(&self, address: AccountId) -> Balance {
-        let addr = utils::near_account_id_to_eth_address(&address);
+    pub fn move_funds_to_near_account(&mut self, address: AccountId, amount: Balance) {
+        let recipient = utils::near_account_id_to_evm_address(&address);
+        let sender = utils::predecessor_as_evm();
+        let amount = balance_to_u256(&amount);
+        self.sub_balance(&sender, amount);
+        self.add_balance(&recipient, amount);
+    }
+
+    pub fn move_funds_to_evm_address(&mut self, address: String, amount: Balance) {
+        let recipient = utils::hex_to_evm_address(&address);
+        let sender = utils::predecessor_as_evm();
+        let amount = balance_to_u256(&amount);
+        self.sub_balance(&sender, amount);
+        self.add_balance(&recipient, amount);
+    }
+
+    pub fn balance_of_near_account(&self, address: AccountId) -> Balance {
+        let addr = utils::near_account_id_to_evm_address(&address);
+        u256_to_balance(&self.balance_of(&addr))
+    }
+
+    pub fn balance_of_evm_address(&self, address: String) -> Balance {
+        let addr = utils::hex_to_evm_address(&address);
         u256_to_balance(&self.balance_of(&addr))
     }
 
     pub fn add_near(&mut self) -> Balance {
         let val = attached_deposit_as_u256_opt().expect("Did not attach value");
-        let addr = utils::near_account_id_to_eth_address(&env::predecessor_account_id());
+        let addr = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
         self.add_balance(&addr, val);
         u256_to_balance(&self.balance_of(&addr))
     }
 
     pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) {
-        let addr = utils::near_account_id_to_eth_address(&env::predecessor_account_id());
+        let addr = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
         if u256_to_balance(&self.balance_of(&addr)) < amount {
             panic!("insufficient funds");
@@ -164,6 +185,17 @@ impl EvmContract {
         // panics if insufficient balance
         self.sub_balance(&addr, balance_to_u256(&Balance::from_be_bytes(bin)));
     }
+
+    pub fn nonce_of_near_account(&self, address: AccountId) -> u128 {
+        let addr = utils::near_account_id_to_evm_address(&address);
+        u256_to_balance(&self.nonce_of(&addr))
+    }
+
+    pub fn nonce_of_evm_address(&self, address: String) -> u128 {
+        let addr = utils::hex_to_evm_address(&address);
+        u256_to_balance(&self.nonce_of(&addr))
+    }
+
 }
 
 impl EvmContract {
@@ -174,6 +206,11 @@ impl EvmContract {
 
     fn commit_balances(&mut self, other: &HashMap<[u8; 20], [u8; 32]>) {
         self.balances
+            .extend(other.into_iter().map(|(k, v)| (k.to_vec(), v.clone())));
+    }
+
+    fn commit_nonces(&mut self, other: &HashMap<[u8; 20], [u8; 32]>) {
+        self.nonces
             .extend(other.into_iter().map(|(k, v)| (k.to_vec(), v.clone())));
     }
 
@@ -192,7 +229,7 @@ impl EvmContract {
     }
 
     fn contract_storage(&self, address: &Address) -> NearMap<[u8; 32], [u8; 32]> {
-        let internal_addr = utils::eth_account_to_internal_address(*address);
+        let internal_addr = utils::evm_account_to_internal_address(*address);
         self._contract_storage(internal_addr)
     }
 
@@ -215,7 +252,7 @@ impl EvmContract {
         // run
         let result = interpreter::call(
             self,
-            &utils::near_account_id_to_eth_address(&env::predecessor_account_id()),
+            &utils::near_account_id_to_evm_address(&env::predecessor_account_id()),
             value,
             0, // call-stack depth
             &contract_address,

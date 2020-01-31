@@ -90,7 +90,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     // TODO: sender vs origin
     fn origin_balance(&self) -> EvmResult<U256> {
-        self.balance(&utils::predecessor_as_eth())
+        self.balance(&utils::predecessor_as_evm())
     }
 
     fn balance(&self, address: &Address) -> EvmResult<U256> {
@@ -113,7 +113,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         if self.is_static() {
             panic!("MutableCallInStaticContext")
         }
-        
+
         let mut nonce = U256::default();
         if address_type == CreateContractAddress::FromSenderAndNonce {
             // TODO: we should create a new substate

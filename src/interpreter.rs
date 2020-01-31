@@ -184,7 +184,7 @@ fn run_against_state(
 
     params.call_type = CallType::None;
     params.code = Some(Arc::new(code));
-    params.origin = utils::predecessor_as_eth();
+    params.origin = utils::predecessor_as_evm();
     params.sender = *sender;
     params.gas = U256::from(startgas);
     params.data = Some(input.to_vec());

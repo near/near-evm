@@ -37,7 +37,7 @@ fn test_create_random_zombie() {
             get_zombies_by_owner(
                 &mut contract,
                 &addr,
-                utils::near_account_id_to_eth_address(&"owner1".to_string())
+                utils::near_account_id_to_evm_address(&"owner1".to_string())
             ),
             []
         );
@@ -47,7 +47,7 @@ fn test_create_random_zombie() {
             get_zombies_by_owner(
                 &mut contract,
                 &addr,
-                utils::near_account_id_to_eth_address(&"owner1".to_string())
+                utils::near_account_id_to_evm_address(&"owner1".to_string())
             ),
             [Uint::from(0)]
         );
@@ -57,7 +57,7 @@ fn test_create_random_zombie() {
             get_zombies_by_owner(
                 &mut contract,
                 &addr,
-                utils::near_account_id_to_eth_address(&"owner1".to_string())
+                utils::near_account_id_to_evm_address(&"owner1".to_string())
             ),
             [Uint::from(0)]
         );

@@ -8,9 +8,11 @@ use near_bindgen::env;
 // TODO: proper keccak[12..] for addresses
 
 pub fn predecessor_as_eth() -> Address {
-    let mut sender = env::predecessor_account_id().into_bytes();
-    sender.resize(20, 0);
-    Address::from_slice(&sender)
+    near_account_id_to_eth_address(&env::predecessor_account_id())
+}
+
+pub fn predecessor_as_internal_address() -> [u8; 20] {
+    near_account_id_to_internal_address(&env::predecessor_account_id())
 }
 
 pub fn prefix_for_contract_storage(contract_address: &[u8]) -> Vec<u8> {
@@ -20,10 +22,6 @@ pub fn prefix_for_contract_storage(contract_address: &[u8]) -> Vec<u8> {
     prefix
 }
 
-pub fn near_account_id_to_eth_address(account_id: &str) -> Address {
-    near_account_bytes_to_eth_address(&account_id.to_string().into_bytes())
-}
-
 pub fn eth_account_to_internal_address(addr: Address) -> [u8; 20] {
     let mut bin = [0u8; 20];
     bin.copy_from_slice(&addr[..]);
@@ -31,9 +29,11 @@ pub fn eth_account_to_internal_address(addr: Address) -> [u8; 20] {
 }
 
 pub fn near_account_bytes_to_eth_address(addr: &Vec<u8>) -> Address {
-    let mut addr = addr.clone();
-    addr.resize(20, 0);
-    Address::from_slice(&addr[0..20])
+    Address::from_slice(&keccak(addr)[12..])
+}
+
+pub fn near_account_id_to_eth_address(account_id: &str) -> Address {
+    near_account_bytes_to_eth_address(&account_id.to_string().into_bytes())
 }
 
 pub fn near_account_id_to_internal_address(account_id: &str) -> [u8; 20] {

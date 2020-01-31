@@ -27,7 +27,7 @@ pub trait EvmState {
         let mut bin = [0u8; 32];
         nonce.to_big_endian(&mut bin);
         let internal_addr = utils::eth_account_to_internal_address(*address);
-        self._set_balance(internal_addr, bin).map(|v| v.into())
+        self._set_nonce(internal_addr, bin).map(|v| v.into())
     }
 
     fn _nonce_of(&self, address: [u8; 20]) -> [u8; 32];
@@ -37,9 +37,9 @@ pub trait EvmState {
     }
 
     fn next_nonce(&mut self, address: &Address) -> U256 {
-        let next = self.nonce_of(address) + 1;
-        self.set_nonce(address, next);
-        next
+        let nonce = self.nonce_of(address);
+        self.set_nonce(address, nonce + 1);
+        nonce
     }
 
     fn read_contract_storage(&self, address: &Address, key: [u8; 32]) -> Option<[u8; 32]>;

@@ -33,6 +33,7 @@ near-crypto = { git = "https://github.com/nearprotocol/nearcore", branch = "stag
 near-testlib = { git = "https://github.com/nearprotocol/nearcore", branch = "staging", package = "testlib" }
 actix = "0.9"
 futures = "0.3"
+lazy-static-include = "2.2.2"
 
 [lib]
 # crate-type = ["cdylib", "rlib"]

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ethereum_types::{Address, U256};
-use vm::GasLeft;
+use vm::{CreateContractAddress, GasLeft};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
@@ -14,6 +14,8 @@ use crate::utils::prefix_for_contract_storage;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)] #[macro_use] extern crate lazy_static_include;
+#[cfg(test)] #[macro_use] extern crate lazy_static;
 
 mod evm_state;
 mod interpreter;
@@ -87,42 +89,28 @@ impl EvmState for EvmContract {
 
 #[near_bindgen_macro]
 impl EvmContract {
-    // TODO: this is UNSAFE. need to calculate contract address rather than pass in
-    pub fn deploy_code(&mut self, contract_address: AccountId, bytecode: String) -> String {
+    // TODO: make this use interpreter::deploy_code
+    pub fn deploy_code(&mut self, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
-        let contract_address = utils::near_account_id_to_eth_address(&contract_address);
+        let sender = utils::predecessor_as_eth();
+        let nonce = self.next_nonce(&sender);
+        let (contract_address, _) = utils::evm_contract_address(
+            CreateContractAddress::FromSenderAndNonce,
+            &sender,
+            &nonce,
+            &code
+        );
 
-        if self.code_at(&contract_address).is_some() {
-            panic!(format!(
-                "Contract exists at {}",
-                hex::encode(contract_address)
-            ));
-        }
+        // let internal_addr = utils::eth_account_to_internal_address(contract_address);
+        let val = attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
 
-        self.set_code(&contract_address, &code);
-
-        let val = attached_deposit_as_u256_opt();
-        let opt = self.call_contract_internal(val, &contract_address, "".to_string());
-
-        match opt {
-            Some(data) => {
-                self.set_code(&contract_address, &data);
-                env::log(
-                    format!(
-                        "ok deployed {} bytes of code at address {}",
-                        data.len(),
-                        hex::encode(&contract_address)
-                    )
-                    .as_bytes(),
-                );
-                hex::encode(&contract_address)
-            }
-            None => panic!("init failed"),
-        }
+        interpreter::deploy_code(self, &sender, val, 0, &contract_address, &code);
+        hex::encode(&contract_address)
     }
 
-    pub fn call_contract(&mut self, contract_address: AccountId, encoded_input: String) -> String {
-        let contract_address = utils::near_account_id_to_eth_address(&contract_address);
+    pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
+        let contract_address = hex::decode(&contract_address).expect("contract_address must be hex");
+        let contract_address = Address::from_slice(&contract_address);
         let val = attached_deposit_as_u256_opt();
 
         let result = self.call_contract_internal(val, &contract_address, encoded_input);

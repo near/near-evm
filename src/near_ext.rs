@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::sync::Arc;
+use std::collections::HashMap;
 
-use ethereum_types::{Address, H256, U256};
 use keccak_hash::keccak;
+use ethereum_types::{Address, H256, U256};
 use parity_bytes::Bytes;
 use vm::{
     CallType, ContractCreateResult, CreateContractAddress, EnvInfo, Error as VmError, GasLeft,
@@ -53,7 +53,7 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn initial_storage_at(&self, key: &H256) -> EvmResult<H256> {
         let raw_val = self
             .sub_state
-            .parent // Read from the unmodified parent state
+            .parent  // Read from the unmodified parent state
             .read_contract_storage(&self.context_addr, key.0)
             .unwrap_or([0u8; 32]); // default to an empty value
         Ok(H256(raw_val))
@@ -113,7 +113,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         if self.is_static() {
             panic!("MutableCallInStaticContext")
         }
-
+        
         let mut nonce = U256::default();
         if address_type == CreateContractAddress::FromSenderAndNonce {
             // TODO: we should create a new substate
@@ -122,12 +122,22 @@ impl<'a> vm::Ext for NearExt<'a> {
             nonce = self.sub_state.next_nonce(&self.context_addr);
         }
 
-        let (addr, _) = utils::evm_contract_address(address_type, &self.context_addr, &nonce, code);
+        // discarded argument here is the codehash.
+        // CONSIDER: storing codehash instead of calculating
+        let (addr, _) = utils::evm_contract_address(
+            address_type,
+            &self.context_addr,
+            &nonce,
+            code
+        );
 
-        interpreter::deploy_code(self.sub_state, &addr, &code.to_vec());
-        // will panic if insufficient balance
-        self.sub_state.sub_balance(&addr, *value);
-        self.sub_state.add_balance(&addr, *value);
+        interpreter::deploy_code(
+            self.sub_state,
+            &self.context_addr,
+            *value,
+            self.depth,
+            &addr,
+            &code.to_vec());
         Ok(ContractCreateResult::Created(addr, 0.into()))
     }
 
@@ -147,6 +157,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         call_type: CallType,
         _trap: bool,
     ) -> Result<MessageCallResult, TrapKind> {
+
         if self.is_static() && call_type != CallType::StaticCall {
             panic!("MutableCallInStaticContext")
         }
@@ -211,7 +222,10 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Returns code at given address
     fn extcode(&self, address: &Address) -> EvmResult<Option<Arc<Bytes>>> {
-        let code = self.sub_state.code_at(address).map(|c| Arc::new(c));
+        let code = self
+            .sub_state
+            .code_at(address)
+            .map(|c| Arc::new(c));
         Ok(code)
     }
 
@@ -220,13 +234,13 @@ impl<'a> vm::Ext for NearExt<'a> {
         let code_opt = self.sub_state.code_at(address);
         let code = match code_opt {
             Some(code) => code,
-            None => return Ok(None),
+            None => return Ok(None)
         };
         if code.len() == 0 {
-            return Ok(None);
+            return Ok(None)
         }
 
-        return Ok(Some(keccak(code)));
+        return Ok(Some(keccak(code)))
     }
 
     /// Returns code size at given address
@@ -265,15 +279,9 @@ impl<'a> vm::Ext for NearExt<'a> {
     fn suicide(&mut self, refund_address: &Address) -> EvmResult<()> {
         // if we call `remove` on this, it won't be committed later
         // so instead we replace it with an empty vector
-        self.sub_state
-            .state
-            .code
-            .insert(self.context_addr.0, vec![]);
+        self.sub_state.state.code.insert(self.context_addr.0, vec![]);
         let balance = self.sub_state.balance_of(&self.context_addr);
-        self.sub_state
-            .state
-            .storages
-            .insert(self.context_addr.0, HashMap::default());
+        self.sub_state.state.storages.insert(self.context_addr.0, HashMap::default());
         self.sub_state.add_balance(refund_address, balance);
         self.sub_state.sub_balance(&self.context_addr, balance);
         Ok(())

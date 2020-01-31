@@ -4,12 +4,54 @@ use ethereum_types::{Address, U256};
 use evm::Factory;
 use vm::{ActionParams, ActionValue, CallType, Ext, GasLeft, Schedule};
 
+use near_bindgen::{env};
+
 use crate::evm_state::{EvmState, StateStore, SubState};
 use crate::near_ext::NearExt;
 use crate::utils;
 
-pub fn deploy_code(state: &mut dyn EvmState, address: &Address, code: &Vec<u8>) {
+pub fn deploy_code(
+    state: &mut dyn EvmState,
+    sender: &Address,
+    value: U256,
+    call_stack_depth: usize,
+    address: &Address,
+    code: &Vec<u8>
+) {
+
+    if state.code_at(address).is_some() {
+        panic!(format!(
+            "Contract exists at {}",
+            hex::encode(address)
+        ));
+    }
+    // The way Ethereum works is that you have initcode and its output is the code
+    // instead, we store the code in the mapping and run it
     state.set_code(address, code);
+
+    // Run the initcode, and transfer balance
+    let result = call(state, sender, Some(value), call_stack_depth, address, &vec![]);
+
+    match result {
+        Some(GasLeft::NeedsReturn{
+            gas_left: _,
+            data,
+            apply_state: true,
+        }) => {
+            state.set_code(address, &data.to_vec());
+            env::log(
+                format!(
+                    "ok deployed {} bytes of code at address {}",
+                    data.len(),
+                    hex::encode(address)
+                )
+                .as_bytes(),
+            );
+        }
+        _ => {
+            panic!("TODO: make this return something that results in revert")
+        }
+    }
 }
 
 pub fn call(

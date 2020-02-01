@@ -24,6 +24,16 @@ contract SolTests is ExposesBalance {
         address(_newGuy).transfer(msg.value);
         return (address(_newGuy), msg.value);
     }
+
+    function payNewGuy(uint256 _aNumber) public payable returns (address, uint256) {
+      SubContract _newGuy = (new SubContract).value(msg.value)(_aNumber);
+      return (address(_newGuy), msg.value);
+    }
+
+    function returnSomeFunds() public payable returns (address, uint256) {
+      address(msg.sender).transfer(msg.value / 2);
+      return (msg.sender, msg.value);
+    }
 }
 
 contract SubContract is ExposesBalance {

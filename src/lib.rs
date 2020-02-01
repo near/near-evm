@@ -197,7 +197,6 @@ impl EvmContract {
         let addr = utils::hex_to_evm_address(&address);
         u256_to_balance(&self.nonce_of(&addr))
     }
-
 }
 
 impl EvmContract {

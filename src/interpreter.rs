@@ -160,7 +160,6 @@ pub fn static_call(
     )
 }
 
-// TODO: maybe don't run static calls through here?
 fn run_and_commit_if_success(
     state: &mut dyn EvmState,
     sender: &Address,
@@ -229,7 +228,7 @@ fn run_against_state(
     input: &Vec<u8>,
     is_static: bool,
 ) -> (Option<GasLeft>, Option<StateStore>) {
-    let code = state.code_at(code_address).expect("code should exist");
+    let code = state.code_at(code_address).unwrap_or(vec![]);
 
     let mut store = StateStore::default();
     let mut sub_state = SubState::new(sender, &mut store, state);

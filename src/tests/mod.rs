@@ -34,14 +34,16 @@ fn test_sends() {
 
 
 #[test]
-fn test_double_deploy() {
+fn test_deploy_with_nonce() {
     test_utils::run_test(0, |contract| {
         let evm_acc = hex::encode(utils::near_account_id_to_evm_address("owner1").0);
         assert_eq!(contract.nonce_of_near_account("owner1".to_string()), 0);
         assert_eq!(contract.nonce_of_evm_address(evm_acc.clone()), 0);
+
         contract.deploy_code(TEST.to_string());
         assert_eq!(contract.nonce_of_near_account("owner1".to_string()), 1);
         assert_eq!(contract.nonce_of_evm_address(evm_acc.clone()), 1);
+
         contract.deploy_code(TEST.to_string());  // at a different address
         assert_eq!(contract.nonce_of_near_account("owner1".to_string()), 2);
         assert_eq!(contract.nonce_of_evm_address(evm_acc.clone()), 2);
@@ -68,7 +70,7 @@ fn test_internal_create() {
 }
 
 #[test]
-fn test_contract_to_contract_transfers() {
+fn test_deploy_and_transfer() {
     test_utils::run_test(100, |contract| {
         let test_addr = contract.deploy_code(TEST.to_string());
         assert_eq!(contract.balance_of_evm_address(test_addr.clone()), 100);
@@ -82,5 +84,42 @@ fn test_contract_to_contract_transfers() {
         let sub_addr = raw[24..64].to_string();
         assert_eq!(contract.balance_of_evm_address(test_addr), 100);
         assert_eq!(contract.balance_of_evm_address(sub_addr), 100);
+    })
+}
+
+#[test]
+fn test_deploy_with_value() {
+    test_utils::run_test(100, |contract| {
+        // This test is identical to the previous one
+        // As we expect behavior to be the same.
+        let test_addr = contract.deploy_code(TEST.to_string());
+        assert_eq!(contract.balance_of_evm_address(test_addr.clone()), 100);
+
+        // This should increment the nonce of the deploying contract
+        // There is 100 attached to this that should be passed through
+        let (input, _) = soltest::functions::pay_new_guy::call(8);
+        let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
+
+        // The sub_addr should have been transferred 100 monies
+        let sub_addr = raw[24..64].to_string();
+        assert_eq!(contract.balance_of_evm_address(test_addr), 100);
+        assert_eq!(contract.balance_of_evm_address(sub_addr), 100);
+    })
+}
+
+#[test]
+fn test_contract_to_eoa_transfer() {
+    test_utils::run_test(100, |contract| {
+        // This test is identical to the previous one
+        // As we expect behavior to be the same.
+        let test_addr = contract.deploy_code(TEST.to_string());
+        assert_eq!(contract.balance_of_evm_address(test_addr.clone()), 100);
+
+        let (input, _) = soltest::functions::return_some_funds::call();
+        let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
+
+        let sender_addr = raw[24..64].to_string();
+        assert_eq!(contract.balance_of_evm_address(test_addr), 150);
+        assert_eq!(contract.balance_of_evm_address(sender_addr), 50);
     })
 }

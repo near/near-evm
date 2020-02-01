@@ -90,7 +90,6 @@ impl EvmState for EvmContract {
 
 #[near_bindgen_macro]
 impl EvmContract {
-    // TODO: make this use interpreter::deploy_code
     pub fn deploy_code(&mut self, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
         let sender = utils::predecessor_as_evm();
@@ -121,7 +120,7 @@ impl EvmContract {
 
         match result {
             Ok(v) => hex::encode(v),
-            Err(s) => format!("internal call failed: {:?}", s),
+            Err(s) => format!("internal call failed: {}", s),
         }
     }
 

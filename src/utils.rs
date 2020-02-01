@@ -4,9 +4,6 @@ use vm::CreateContractAddress;
 
 use near_bindgen::env;
 
-// TODO: clean up all these
-// TODO: proper keccak[12..] for addresses
-
 pub fn predecessor_as_evm() -> Address {
     near_account_id_to_evm_address(&env::predecessor_account_id())
 }

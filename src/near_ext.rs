@@ -119,10 +119,8 @@ impl<'a> vm::Ext for NearExt<'a> {
         }
 
         let mut nonce = U256::default();
+        // TODO: move this into deploy_code
         if address_type == CreateContractAddress::FromSenderAndNonce {
-            // TODO: we should create a new substate
-            //       and commit to the increment in the substate AFTER success
-            //       I think we have no failure cases right now, so that can wait
             nonce = self.sub_state.next_nonce(&self.context_addr);
         }
 

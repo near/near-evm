@@ -15,9 +15,9 @@ fn deploy_cryptozombies(contract: &mut EvmContract) -> String {
     )
 }
 
-fn create_random_zombie(contract: &mut EvmContract, addr: &String, name: &str) {
+fn create_random_zombie(contract: &mut EvmContract, addr: &String, name: &str) -> String {
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call(name.to_string());
-    contract.call_contract(addr.to_string(), hex::encode(input));
+    contract.call_contract(addr.to_string(), hex::encode(input))
 }
 
 fn get_zombies_by_owner(contract: &mut EvmContract, addr: &String, owner: Address) -> Vec<Uint> {

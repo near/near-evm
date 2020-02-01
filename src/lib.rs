@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ethereum_types::{Address, U256};
-use vm::{CreateContractAddress, GasLeft};
+use vm::{CreateContractAddress};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
@@ -117,12 +117,11 @@ impl EvmContract {
         if let Some(val) = value {
             self.add_balance(&utils::predecessor_as_evm(), val);
         }
-
         let result = self.call_contract_internal(value, &contract_address, encoded_input);
 
         match result {
-            Some(v) => hex::encode(v),
-            None => panic!("internal command returned None"),
+            Ok(v) => hex::encode(v),
+            Err(s) => format!("internal call failed: {:?}", s),
         }
     }
 
@@ -130,8 +129,7 @@ impl EvmContract {
         let recipient = utils::near_account_id_to_evm_address(&address);
         let sender = utils::predecessor_as_evm();
         let amount = balance_to_u256(&amount);
-        self.sub_balance(&sender, amount);
-        self.add_balance(&recipient, amount);
+        self.transfer_balance(&sender, &recipient, amount);
     }
 
     pub fn move_funds_to_evm_address(&mut self, address: String, amount: Balance) {
@@ -249,7 +247,7 @@ impl EvmContract {
         value: Option<U256>,
         contract_address: &Address,
         encoded_input: String,
-    ) -> Option<Vec<u8>> {
+    ) -> Result<Vec<u8>, String> {
         // decode
         let input = encoded_input;
         let input = hex::decode(input).expect("invalid hex");
@@ -264,19 +262,7 @@ impl EvmContract {
             &input,
         );
 
-        match result {
-            Some(GasLeft::Known(_)) => {
-                // No returndata
-                Some(vec![])
-            }
-            Some(GasLeft::NeedsReturn {
-                // NB: EVM handles this separately because returning data costs variable gas
-                gas_left: _,
-                data,
-                apply_state: _,
-            }) => Some(data.to_vec()),
-            None => None,
-        }
+        result.map(|v| v.to_vec())
     }
 }
 

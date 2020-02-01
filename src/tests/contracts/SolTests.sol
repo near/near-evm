@@ -19,9 +19,10 @@ contract SolTests is ExposesBalance {
 
     function () external payable {}
 
-    function deployNewGuy(uint256 _aNumber) public returns (address) {
+    function deployNewGuy(uint256 _aNumber) public payable returns (address, uint256) {
         SubContract _newGuy = new SubContract(_aNumber);
-        return address(_newGuy);
+        address(_newGuy).transfer(msg.value);
+        return (address(_newGuy), msg.value);
     }
 }
 

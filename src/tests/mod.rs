@@ -59,7 +59,7 @@ fn test_internal_create() {
         let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
         assert_eq!(contract.nonce_of_evm_address(test_addr.clone()), 1);
 
-        let sub_addr = raw[24..].to_string();
+        let sub_addr = raw[24..64].to_string();
         let (new_input, _) = subcontract::functions::a_number::call();
         let new_raw = contract.call_contract(sub_addr, hex::encode(new_input));
         let output = subcontract::functions::a_number::decode_output(&hex::decode(&new_raw).unwrap()).unwrap();
@@ -72,13 +72,15 @@ fn test_contract_to_contract_transfers() {
     test_utils::run_test(100, |contract| {
         let test_addr = contract.deploy_code(TEST.to_string());
         assert_eq!(contract.balance_of_evm_address(test_addr.clone()), 100);
-        //
-        // // This should increment the nonce of the deploying contract
-        // let (input, _) = soltest::functions::deploy_new_guy::call(0);
-        // let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
-        // let sub_addr = raw[24..].to_string();
 
-        // assert_eq!(contract.balance_of_evm_address(evm_acc), test_addr);
+        // This should increment the nonce of the deploying contract
+        // There is 100 attached to this that should be passed through
+        let (input, _) = soltest::functions::deploy_new_guy::call(8);
+        let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
 
+        // The sub_addr should have been transferred 100 monies
+        let sub_addr = raw[24..64].to_string();
+        assert_eq!(contract.balance_of_evm_address(test_addr), 100);
+        assert_eq!(contract.balance_of_evm_address(sub_addr), 100);
     })
 }

@@ -5,7 +5,7 @@ use keccak_hash::keccak;
 use ethereum_types::{Address, H256, U256};
 use parity_bytes::Bytes;
 use vm::{
-    CallType, ContractCreateResult, CreateContractAddress, EnvInfo, Error as VmError, GasLeft,
+    CallType, ContractCreateResult, CreateContractAddress, EnvInfo, Error as VmError,
     MessageCallResult, Result as EvmResult, ReturnData, Schedule, TrapKind,
 };
 
@@ -78,17 +78,21 @@ impl<'a> vm::Ext for NearExt<'a> {
         Ok(())
     }
 
-    fn exists(&self, _address: &Address) -> EvmResult<bool> {
-        not_implemented("exists");
-        unimplemented!()
+    // TODO: research why these are different
+    fn exists(&self, address: &Address) -> EvmResult<bool> {
+        Ok(
+            self.sub_state.balance_of(address) > U256::from(0)
+            || self.sub_state.code_at(address).is_some()
+        )
     }
 
-    fn exists_and_not_null(&self, _address: &Address) -> EvmResult<bool> {
-        not_implemented("exists_and_not_null");
-        unimplemented!()
+    fn exists_and_not_null(&self, address: &Address) -> EvmResult<bool> {
+        Ok(
+            self.sub_state.balance_of(address) > 0.into()
+            || self.sub_state.code_at(address).is_some()
+        )
     }
 
-    // TODO: sender vs origin
     fn origin_balance(&self) -> EvmResult<U256> {
         self.balance(&utils::predecessor_as_evm())
     }
@@ -138,7 +142,8 @@ impl<'a> vm::Ext for NearExt<'a> {
             self.depth,
             &addr,
             &code.to_vec());
-        Ok(ContractCreateResult::Created(addr, 0.into()))
+
+        Ok(ContractCreateResult::Created(addr, 1_000_000_000.into()))
     }
 
     /// Message call.
@@ -157,12 +162,11 @@ impl<'a> vm::Ext for NearExt<'a> {
         call_type: CallType,
         _trap: bool,
     ) -> Result<MessageCallResult, TrapKind> {
-
         if self.is_static() && call_type != CallType::StaticCall {
             panic!("MutableCallInStaticContext")
         }
 
-        let opt_gas_left = match call_type {
+        let result = match call_type {
             CallType::None => {
                 // Can stay unimplemented
                 not_implemented("CallType=None");
@@ -199,25 +203,35 @@ impl<'a> vm::Ext for NearExt<'a> {
             ),
         };
 
-        // GasLeft into MessageCallResult
-        let res = match opt_gas_left {
-            Some(GasLeft::Known(gas_left)) => {
-                vm::MessageCallResult::Success(gas_left, ReturnData::empty())
+        let msg_call_result = match result {
+            Ok(data) => MessageCallResult::Success(1_000_000_000.into(), data),
+            Err(s) => {
+                let message = s.as_bytes().to_vec();
+                let message_len = message.len();
+                MessageCallResult::Reverted(1_000_000_000.into(), ReturnData::new(message, 0, message_len))
             }
-            Some(GasLeft::NeedsReturn {
-                gas_left,
-                data,
-                apply_state: true,
-            }) => vm::MessageCallResult::Success(gas_left, data),
-            Some(GasLeft::NeedsReturn {
-                gas_left,
-                data,
-                apply_state: false,
-            }) => vm::MessageCallResult::Reverted(gas_left, data),
-            _ => vm::MessageCallResult::Failed,
         };
-
-        Ok(res) // Even failed is Ok. Err() is for resume traps
+        Ok(msg_call_result)
+        //
+        // // GasLeft into MessageCallResult
+        // let res = match opt_gas_left {
+        //     Some(GasLeft::Known(gas_left)) => {
+        //         vm::MessageCallResult::Success(gas_left, ReturnData::empty())
+        //     }
+        //     Some(GasLeft::NeedsReturn {
+        //         gas_left,
+        //         data,
+        //         apply_state: true,
+        //     }) => vm::MessageCallResult::Success(gas_left, data),
+        //     Some(GasLeft::NeedsReturn {
+        //         gas_left,
+        //         data,
+        //         apply_state: false,
+        //     }) => vm::MessageCallResult::Reverted(gas_left, data),
+        //     _ => vm::MessageCallResult::Failed,
+        // };
+        //
+        // Ok(res) // Even failed is Ok. Err() is for resume traps
     }
 
     /// Returns code at given address

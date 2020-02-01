@@ -101,7 +101,6 @@ impl StateStore {
             .extend(other.into_iter().map(|(k, v)| (k.clone(), v.clone())));
     }
 
-
     pub fn commit_storages(&mut self, other: &HashMap<[u8; 20], HashMap<[u8; 32], [u8; 32]>>) {
         for (k, v) in other.iter() {
             match self.storages.get_mut(k) {

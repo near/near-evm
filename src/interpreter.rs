@@ -67,8 +67,6 @@ pub fn _create(
     let mut store = StateStore::default();
     let mut sub_state = SubState::new(sender, &mut store, state);
 
-    sub_state.set_code(address, code);
-
     let params = ActionParams {
         code_address: address.clone(),
         address: address.clone(),

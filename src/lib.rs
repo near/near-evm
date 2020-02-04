@@ -93,6 +93,8 @@ impl EvmContract {
     pub fn deploy_code(&mut self, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
         let sender = utils::predecessor_as_evm();
+
+        // TODO: move into create
         let nonce = self.next_nonce(&sender);
         let (contract_address, _) = utils::evm_contract_address(
             CreateContractAddress::FromSenderAndNonce,

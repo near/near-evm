@@ -14,7 +14,6 @@ contract ExposesBalance {
 
 
 contract SolTests is ExposesBalance {
-
     constructor() public payable {}
 
     function () external payable {}
@@ -42,6 +41,10 @@ contract SubContract is ExposesBalance {
 
     constructor(uint256 _aNumber) public payable {
       aNumber = _aNumber;
+    }
+
+    function aFunction() public pure returns (bool) {
+      return true;
     }
 
     function () external payable {}

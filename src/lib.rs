@@ -90,6 +90,18 @@ impl EvmState for EvmContract {
 
 #[near_bindgen_macro]
 impl EvmContract {
+
+    // for Eth call of similar name
+    pub fn get_storage_at(&self, address: String, key: String) -> String {
+        let mut key_buf = [0u8; 32];
+        key_buf.copy_from_slice(&hex::decode(key).expect("invalid storage key"));
+        let val = self.read_contract_storage(
+            &utils::hex_to_evm_address(&address),
+            key_buf
+        ).unwrap_or([0u8;32]);
+        hex::encode(val)
+    }
+
     pub fn deploy_code(&mut self, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
         let sender = utils::predecessor_as_evm();

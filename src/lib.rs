@@ -178,10 +178,6 @@ impl EvmContract {
             panic!("insufficient funds");
         }
 
-        /*
-        panicked at 'called `Result::unwrap()` on an `Err` value: HostError(GasExceeded)',
-        near-bindgen/src/environment/mocked_blockchain.rs:252:9
-        */
         Promise::new(recipient)
             .transfer(amount)
             .then(callback::finalize_retrieve_near(
@@ -189,7 +185,7 @@ impl EvmContract {
                 amount.to_be_bytes().to_vec(),
                 &env::current_account_id(),
                 0,
-                2u64.pow(63),
+                (env::prepaid_gas() - env::used_gas()) / 2,
             ));
     }
 

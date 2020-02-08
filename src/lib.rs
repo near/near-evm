@@ -124,6 +124,10 @@ impl EvmContract {
         hex::encode(&contract_address)
     }
 
+    pub fn get_code(&self, address: &Address) -> Vec<u8> {
+        self.code_at(address).expect("Contract not found")
+    }
+
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address =
             hex::decode(&contract_address).expect("contract_address must be hex");

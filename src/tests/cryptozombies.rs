@@ -10,9 +10,7 @@ use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
 
 fn deploy_cryptozombies(contract: &mut EvmContract) -> String {
     let zombie_code = include_bytes!("zombieAttack.bin").to_vec();
-    contract.deploy_code(
-        String::from_utf8(zombie_code).unwrap(),
-    )
+    contract.deploy_code(String::from_utf8(zombie_code).unwrap())
 }
 
 fn create_random_zombie(contract: &mut EvmContract, addr: &String, name: &str) -> String {
@@ -26,7 +24,6 @@ fn get_zombies_by_owner(contract: &mut EvmContract, addr: &String, owner: Addres
     let output = hex::decode(output);
     cryptozombies::functions::get_zombies_by_owner::decode_output(&output.unwrap()).unwrap()
 }
-
 
 #[test]
 // CryptoZombies

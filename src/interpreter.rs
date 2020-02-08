@@ -14,9 +14,8 @@ pub fn deploy_code(
     value: U256,
     call_stack_depth: usize,
     address: &Address,
-    code: &Vec<u8>
+    code: &Vec<u8>,
 ) {
-
     if state.code_at(address).is_some() {
         panic!(format!(
             "Contract exists at {:?}. How did this happen?",
@@ -24,29 +23,18 @@ pub fn deploy_code(
         ));
     }
 
-    let (result, state_updates) = _create(
-        state,
-        sender,
-        value,
-        call_stack_depth,
-        address,
-        code
-    );
+    let (result, state_updates) = _create(state, sender, value, call_stack_depth, address, code);
 
     // Apply known gas amount changes (all reverts are NeedsReturn)
     // Apply NeedsReturn changes if apply_state
     // Return the result unmodified
     let (return_data, apply) = match result {
-        Some(GasLeft::Known(_)) => {
-            (ReturnData::empty(), true)
-        }
+        Some(GasLeft::Known(_)) => (ReturnData::empty(), true),
         Some(GasLeft::NeedsReturn {
             gas_left: _,
             data,
-            apply_state
-        }) => {
-            (data, apply_state)
-        },
+            apply_state,
+        }) => (data, apply_state),
         _ => panic!("Unknown Error".to_string()),
     };
 
@@ -62,7 +50,7 @@ pub fn _create(
     value: U256,
     call_stack_depth: usize,
     address: &Address,
-    code: &Vec<u8>
+    code: &Vec<u8>,
 ) -> (Option<GasLeft>, Option<StateStore>) {
     let mut store = StateStore::default();
     let mut sub_state = SubState::new(sender, &mut store, state);
@@ -186,23 +174,17 @@ fn run_and_commit_if_success(
     // Apply NeedsReturn changes if apply_state
     // Return the result unmodified
     let return_data = match result {
-        Some(GasLeft::Known(_)) => {
-            Ok(ReturnData::empty())
-        }
+        Some(GasLeft::Known(_)) => Ok(ReturnData::empty()),
         Some(GasLeft::NeedsReturn {
             gas_left: _,
             data,
             apply_state: true,
-        }) => {
-            Ok(data)
-        },
+        }) => Ok(data),
         Some(GasLeft::NeedsReturn {
             gas_left: _,
             data,
             apply_state: false,
-        }) => {
-            Err(hex::encode(data.to_vec()))
-        }
+        }) => Err(hex::encode(data.to_vec())),
         _ => Err("Unknown Error".to_string()),
     };
 
@@ -252,7 +234,12 @@ fn run_against_state(
         sub_state.transfer_balance(sender, state_address, val);
     }
 
-    let mut ext = NearExt::new(*state_address, &mut sub_state, call_stack_depth + 1, is_static);
+    let mut ext = NearExt::new(
+        *state_address,
+        &mut sub_state,
+        call_stack_depth + 1,
+        is_static,
+    );
     ext.info.gas_limit = U256::from(1_000_000_000);
     ext.schedule = Schedule::new_constantinople();
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ethereum_types::{Address, U256};
-use vm::{CreateContractAddress};
+use vm::CreateContractAddress;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
@@ -14,8 +14,12 @@ use crate::utils::prefix_for_contract_storage;
 
 #[cfg(test)]
 mod tests;
-#[cfg(test)] #[macro_use] extern crate lazy_static_include;
-#[cfg(test)] #[macro_use] extern crate lazy_static;
+#[cfg(test)]
+#[macro_use]
+extern crate lazy_static_include;
+#[cfg(test)]
+#[macro_use]
+extern crate lazy_static;
 
 mod evm_state;
 mod interpreter;
@@ -90,15 +94,13 @@ impl EvmState for EvmContract {
 
 #[near_bindgen_macro]
 impl EvmContract {
-
     // for Eth call of similar name
     pub fn get_storage_at(&self, address: String, key: String) -> String {
         let mut key_buf = [0u8; 32];
         key_buf.copy_from_slice(&hex::decode(key).expect("invalid storage key"));
-        let val = self.read_contract_storage(
-            &utils::hex_to_evm_address(&address),
-            key_buf
-        ).unwrap_or([0u8;32]);
+        let val = self
+            .read_contract_storage(&utils::hex_to_evm_address(&address), key_buf)
+            .unwrap_or([0u8; 32]);
         hex::encode(val)
     }
 
@@ -112,7 +114,7 @@ impl EvmContract {
             CreateContractAddress::FromSenderAndNonce,
             &sender,
             &nonce,
-            &code
+            &code,
         );
 
         let val = attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
@@ -123,7 +125,8 @@ impl EvmContract {
     }
 
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
-        let contract_address = hex::decode(&contract_address).expect("contract_address must be hex");
+        let contract_address =
+            hex::decode(&contract_address).expect("contract_address must be hex");
         let contract_address = Address::from_slice(&contract_address);
 
         let value = attached_deposit_as_u256_opt();

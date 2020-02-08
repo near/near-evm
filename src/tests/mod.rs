@@ -2,7 +2,7 @@ mod cryptozombies;
 mod test_utils;
 
 use ethabi_contract::use_contract;
-use ethereum_types::{U256};
+use ethereum_types::U256;
 
 use crate::utils;
 
@@ -32,7 +32,6 @@ fn test_sends() {
     })
 }
 
-
 #[test]
 fn test_deploy_with_nonce() {
     test_utils::run_test(0, |contract| {
@@ -44,7 +43,7 @@ fn test_deploy_with_nonce() {
         assert_eq!(contract.nonce_of_near_account("owner1".to_string()), 1);
         assert_eq!(contract.nonce_of_evm_address(evm_acc.clone()), 1);
 
-        contract.deploy_code(TEST.to_string());  // at a different address
+        contract.deploy_code(TEST.to_string()); // at a different address
         assert_eq!(contract.nonce_of_near_account("owner1".to_string()), 2);
         assert_eq!(contract.nonce_of_evm_address(evm_acc.clone()), 2);
     })
@@ -64,7 +63,9 @@ fn test_internal_create() {
         let sub_addr = raw[24..64].to_string();
         let (new_input, _) = subcontract::functions::a_number::call();
         let new_raw = contract.call_contract(sub_addr, hex::encode(new_input));
-        let output = subcontract::functions::a_number::decode_output(&hex::decode(&new_raw).unwrap()).unwrap();
+        let output =
+            subcontract::functions::a_number::decode_output(&hex::decode(&new_raw).unwrap())
+                .unwrap();
         assert_eq!(output, U256::from(8));
     })
 }

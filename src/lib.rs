@@ -200,7 +200,11 @@ impl EvmContract {
         let mut bin = [0u8; 16];
         bin.copy_from_slice(&amount[..]);
         // panics if called externally
-        assert_eq!(env::current_account_id(), env::predecessor_account_id(), "caller is not self");
+        assert_eq!(
+            env::current_account_id(),
+            env::predecessor_account_id(),
+            "caller is not self"
+        );
         // panics if insufficient balance
         self.sub_balance(&addr, balance_to_u256(&Balance::from_be_bytes(bin)));
     }

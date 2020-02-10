@@ -37,8 +37,8 @@ fn create_account(client: &RpcUser, evm_account_signer: &InMemorySigner) {
     );
     if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
         println!("Create account Success");
-    // } else {
-    //     panic!(format!("Create account Failed {:?}", tx_result));
+        // } else {
+        //     panic!(format!("Create account Failed {:?}", tx_result));
     }
 }
 
@@ -74,7 +74,10 @@ fn deploy_cryptozombies(client: &RpcUser) -> String {
         println!("deploy_code(cryptozombies): {}\n", address);
         address
     } else {
-        panic!(format!("deploy_code(cryptozombies) failed: {:?}", tx_result))
+        panic!(format!(
+            "deploy_code(cryptozombies) failed: {:?}",
+            tx_result
+        ))
     }
 }
 
@@ -140,12 +143,11 @@ fn add_near(client: &RpcUser) {
     } else {
         panic!(format!("Add Near Failed {:?}", tx_result));
     }
-
 }
 
 fn retrieve_near(client: &RpcUser) {
     let input = format!(
-        "{{\"recipient\":\"{}\",\"amount\":\"{}\"}}",
+        "{{\"recipient\":\"{}\",\"amount\":{}}}",
         SIGNER_NAME.to_owned(),
         SOME_MONEY
     );
@@ -155,7 +157,7 @@ fn retrieve_near(client: &RpcUser) {
         "retrieve_near",
         input.into_bytes(),
         LOTS_OF_GAS,
-        0
+        0,
     );
     if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
         println!("Retrieve Near Success");
@@ -190,6 +192,7 @@ fn evm_balance_of_near_account(client: &RpcUser, account: String) -> u128 {
 
 #[test]
 fn test_all_in_one() {
+    // Begin shared test prefix
     let addr = "localhost:3030";
     let contract_signer = InMemorySigner::from_seed(CONTRACT_NAME, KeyType::ED25519, CONTRACT_NAME);
     let contract_signer = Arc::new(contract_signer);
@@ -203,7 +206,7 @@ fn test_all_in_one() {
     deploy_evm(&contract_user);
     // End shared test prefix
 
-    // Begin Test Zombie Functionality
+    // Begin zombie call tests
     let zombies_address = deploy_cryptozombies(&devnet_user);
     create_random_zombie(&devnet_user, &zombies_address, "zomb1");
     let zombies = get_zombies_by_owner(
@@ -213,10 +216,9 @@ fn test_all_in_one() {
     );
     assert_eq!(zombies, vec![Uint::from(0)]);
 
-    let evm_start_bal =  evm_balance_of_near_account(&devnet_user, SIGNER_NAME.to_owned());
+    // Begin add_near test
+    let evm_start_bal = evm_balance_of_near_account(&devnet_user, SIGNER_NAME.to_owned());
     let near_start_bal = devnet_user.view_balance(&SIGNER_NAME.to_owned()).unwrap();
-
-    // Begin Test Near functionality
     add_near(&devnet_user);
     assert_eq!(
         devnet_user.view_balance(&SIGNER_NAME.to_owned()).unwrap(),
@@ -231,7 +233,7 @@ fn test_all_in_one() {
         evm_start_bal + SOME_MONEY
     );
 
-    // begin test retrieve
+    // Begin retrieve_near test
     retrieve_near(&devnet_user);
     assert_eq!(
         evm_balance_of_near_account(&devnet_user, SIGNER_NAME.to_owned()),

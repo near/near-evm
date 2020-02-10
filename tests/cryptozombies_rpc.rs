@@ -25,24 +25,33 @@ lazy_static_include_str!(ZOMBIES, "src/tests/zombieAttack.bin");
 const CONTRACT_NAME: &str = "near_evm";
 const SIGNER_NAME: &str = "test.near";
 const LOTS_OF_GAS: u64 = 10_000_000_000_000_000;
+const ACCOUNT_DEPOSIT: u128 = 10_000_000_000;
+const SOME_MONEY: u128 = 100_000_000;
 
 fn create_account(client: &RpcUser, evm_account_signer: &InMemorySigner) {
     let tx_result = client.create_account(
         SIGNER_NAME.to_owned(),
         CONTRACT_NAME.to_owned(),
         evm_account_signer.public_key.clone(),
-        10_000_000_000,
+        ACCOUNT_DEPOSIT,
     );
-    println!("Create account: {:?}\n", tx_result);
+    if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
+        println!("Create account Success");
+    // } else {
+    //     panic!(format!("Create account Failed {:?}", tx_result));
+    }
 }
 
 fn deploy_evm(contract_user: &RpcUser) {
     println!("Deploying evm contract");
     // let contract = include_bytes!("../res/near_evm.wasm").to_vec();
-    println!("{:?}", EVM.to_vec().len());
     let contract = EVM.to_vec();
     let tx_result = contract_user.deploy_contract(CONTRACT_NAME.to_owned(), contract);
-    println!("Deploy evm contract: {:?}\n", tx_result);
+    if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
+        println!("Deploy Evm Success");
+    } else {
+        panic!(format!("Deploy Evm Failed {:?}", tx_result));
+    }
 }
 
 fn deploy_cryptozombies(client: &RpcUser) -> String {
@@ -65,7 +74,7 @@ fn deploy_cryptozombies(client: &RpcUser) -> String {
         println!("deploy_code(cryptozombies): {}\n", address);
         address
     } else {
-        panic!(tx_result)
+        panic!(format!("deploy_code(cryptozombies) failed: {:?}", tx_result))
     }
 }
 
@@ -84,7 +93,11 @@ fn create_random_zombie(client: &RpcUser, zombies_address: &str, name: &str) {
         LOTS_OF_GAS,
         0,
     );
-    println!("call_contract(createRandomZombie): {:?}\n", tx_result);
+    if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
+        println!("createRandomZombie Success");
+    } else {
+        panic!(format!("createRandomZombie Failed {:?}", tx_result));
+    }
 }
 
 fn get_zombies_by_owner(client: &RpcUser, zombies_address: &str, owner: Address) -> Vec<Uint> {
@@ -102,13 +115,52 @@ fn get_zombies_by_owner(client: &RpcUser, zombies_address: &str, owner: Address)
         LOTS_OF_GAS,
         0,
     );
-    println!("call_contract(getZombiesByOwner): {:?}\n", tx_result);
     if let FinalExecutionStatus::SuccessValue(ref base64) = tx_result.as_ref().unwrap().status {
         let bytes = from_base64(base64).unwrap();
         let bytes = hex::decode(&bytes[1..bytes.len() - 1]).unwrap();
-        cryptozombies::functions::get_zombies_by_owner::decode_output(&bytes).unwrap()
+        let res = cryptozombies::functions::get_zombies_by_owner::decode_output(&bytes).unwrap();
+        println!("call_contract(getZombiesByOwner): {:?}\n", res);
+        res
     } else {
         panic!(tx_result)
+    }
+}
+
+fn add_near(client: &RpcUser) {
+    let tx_result = client.function_call(
+        SIGNER_NAME.to_owned(),
+        CONTRACT_NAME.to_owned(),
+        "add_near",
+        vec![],
+        LOTS_OF_GAS,
+        100_000_000,
+    );
+    if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
+        println!("Add Near Success");
+    } else {
+        panic!(format!("Add Near Failed {:?}", tx_result));
+    }
+
+}
+
+fn retrieve_near(client: &RpcUser) {
+    let input = format!(
+        "{{\"recipient\":\"{}\",\"amount\":\"{}\"}}",
+        SIGNER_NAME.to_owned(),
+        SOME_MONEY
+    );
+    let tx_result = client.function_call(
+        SIGNER_NAME.to_owned(),
+        CONTRACT_NAME.to_owned(),
+        "retrieve_near",
+        input.into_bytes(),
+        LOTS_OF_GAS,
+        0
+    );
+    if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
+        println!("Retrieve Near Success");
+    } else {
+        panic!(format!("Retrieve Near Failed {:?}", tx_result));
     }
 }
 
@@ -122,14 +174,15 @@ fn evm_balance_of_near_account(client: &RpcUser, account: String) -> u128 {
         LOTS_OF_GAS,
         0,
     );
-    println!("evm_balance_of_near_account {} {:?}", account, tx_result);
     if let FinalExecutionStatus::SuccessValue(ref base64) = tx_result.as_ref().unwrap().status {
         let str_rep = from_base64(base64)
             .map(|v| String::from_utf8(v).ok())
             .ok()
             .flatten()
             .unwrap();
-        u128::from_str_radix(&str_rep, 10).unwrap()
+        let bal = u128::from_str_radix(&str_rep, 10).unwrap();
+        println!("evm_balance_of_near_account {} {:?}", account, bal);
+        bal
     } else {
         panic!(tx_result)
     }
@@ -150,6 +203,7 @@ fn test_all_in_one() {
     deploy_evm(&contract_user);
     // End shared test prefix
 
+    // Begin Test Zombie Functionality
     let zombies_address = deploy_cryptozombies(&devnet_user);
     create_random_zombie(&devnet_user, &zombies_address, "zomb1");
     let zombies = get_zombies_by_owner(
@@ -159,13 +213,36 @@ fn test_all_in_one() {
     );
     assert_eq!(zombies, vec![Uint::from(0)]);
 
+    let evm_start_bal =  evm_balance_of_near_account(&devnet_user, SIGNER_NAME.to_owned());
+    let near_start_bal = devnet_user.view_balance(&SIGNER_NAME.to_owned()).unwrap();
+
+    // Begin Test Near functionality
+    add_near(&devnet_user);
+    assert_eq!(
+        devnet_user.view_balance(&SIGNER_NAME.to_owned()).unwrap(),
+        near_start_bal - SOME_MONEY
+    );
+    assert_eq!(
+        devnet_user.view_balance(&CONTRACT_NAME.to_owned()).unwrap(),
+        ACCOUNT_DEPOSIT + evm_start_bal + SOME_MONEY
+    );
     assert_eq!(
         evm_balance_of_near_account(&devnet_user, SIGNER_NAME.to_owned()),
-        0
+        evm_start_bal + SOME_MONEY
     );
 
-    println!(
-        "{:?}",
-        devnet_user.view_balance(&SIGNER_NAME.to_owned()).unwrap()
+    // begin test retrieve
+    retrieve_near(&devnet_user);
+    assert_eq!(
+        evm_balance_of_near_account(&devnet_user, SIGNER_NAME.to_owned()),
+        evm_start_bal
+    );
+    assert_eq!(
+        devnet_user.view_balance(&SIGNER_NAME.to_owned()).unwrap(),
+        near_start_bal
+    );
+    assert_eq!(
+        devnet_user.view_balance(&CONTRACT_NAME.to_owned()).unwrap(),
+        ACCOUNT_DEPOSIT + evm_start_bal
     );
 }

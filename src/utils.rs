@@ -2,6 +2,8 @@ use ethereum_types::{Address, H256, U256};
 use keccak_hash::keccak;
 use vm::CreateContractAddress;
 
+use near_vm_logic::types::{Balance};
+
 use near_bindgen::env;
 
 pub fn predecessor_as_evm() -> Address {
@@ -39,6 +41,31 @@ pub fn hex_to_evm_address(address: &str) -> Address {
     let addr = hex::decode(&address).unwrap();
     Address::from_slice(&addr)
 }
+
+
+pub fn attached_deposit_as_u256_opt() -> Option<U256> {
+    let attached = env::attached_deposit();
+    if attached == 0 {
+        None
+    } else {
+        Some(balance_to_u256(&attached))
+    }
+}
+
+pub fn balance_to_u256(val: &Balance) -> U256 {
+    let mut bin = [0u8; 32];
+    bin[16..].copy_from_slice(&val.to_be_bytes());
+    bin.into()
+}
+
+pub fn u256_to_balance(val: &U256) -> Balance {
+    let mut scratch = [0u8; 32];
+    let mut bin = [0u8; 16];
+    val.to_big_endian(&mut scratch);
+    bin.copy_from_slice(&scratch[16..]);
+    Balance::from_be_bytes(bin)
+}
+
 
 /// Returns new address created from address, nonce, and code hash
 /// Copied directly from the parity codebase

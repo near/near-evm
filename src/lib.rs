@@ -117,7 +117,7 @@ impl EvmContract {
             &code,
         );
 
-        let val = attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
+        let val = utils::attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
         self.add_balance(&utils::predecessor_as_evm(), val);
 
         interpreter::deploy_code(self, &sender, val, 0, &contract_address, &code);
@@ -133,7 +133,7 @@ impl EvmContract {
             hex::decode(&contract_address).expect("contract_address must be hex");
         let contract_address = Address::from_slice(&contract_address);
 
-        let value = attached_deposit_as_u256_opt();
+        let value = utils::attached_deposit_as_u256_opt();
         if let Some(val) = value {
             self.add_balance(&utils::predecessor_as_evm(), val);
         }
@@ -148,40 +148,40 @@ impl EvmContract {
     pub fn move_funds_to_near_account(&mut self, address: AccountId, amount: Balance) {
         let recipient = utils::near_account_id_to_evm_address(&address);
         let sender = utils::predecessor_as_evm();
-        let amount = balance_to_u256(&amount);
+        let amount = utils::balance_to_u256(&amount);
         self.transfer_balance(&sender, &recipient, amount);
     }
 
     pub fn move_funds_to_evm_address(&mut self, address: String, amount: Balance) {
         let recipient = utils::hex_to_evm_address(&address);
         let sender = utils::predecessor_as_evm();
-        let amount = balance_to_u256(&amount);
+        let amount = utils::balance_to_u256(&amount);
         self.sub_balance(&sender, amount);
         self.add_balance(&recipient, amount);
     }
 
     pub fn balance_of_near_account(&self, address: AccountId) -> Balance {
         let addr = utils::near_account_id_to_evm_address(&address);
-        u256_to_balance(&self.balance_of(&addr))
+        utils::u256_to_balance(&self.balance_of(&addr))
     }
 
     pub fn balance_of_evm_address(&self, address: String) -> Balance {
         let addr = utils::hex_to_evm_address(&address);
-        u256_to_balance(&self.balance_of(&addr))
+        utils::u256_to_balance(&self.balance_of(&addr))
     }
 
     pub fn add_near(&mut self) -> Balance {
-        let val = attached_deposit_as_u256_opt().expect("Did not attach value");
+        let val = utils::attached_deposit_as_u256_opt().expect("Did not attach value");
         let addr = &utils::predecessor_as_evm();
 
         self.add_balance(&addr, val);
-        u256_to_balance(&self.balance_of(&addr))
+        utils::u256_to_balance(&self.balance_of(&addr))
     }
 
     pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) {
         let addr = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
-        if u256_to_balance(&self.balance_of(&addr)) < amount {
+        if utils::u256_to_balance(&self.balance_of(&addr)) < amount {
             panic!("insufficient funds");
         }
 
@@ -206,17 +206,17 @@ impl EvmContract {
             "caller is not self"
         );
         // panics if insufficient balance
-        self.sub_balance(&addr, balance_to_u256(&Balance::from_be_bytes(bin)));
+        self.sub_balance(&addr, utils::balance_to_u256(&Balance::from_be_bytes(bin)));
     }
 
     pub fn nonce_of_near_account(&self, address: AccountId) -> u128 {
         let addr = utils::near_account_id_to_evm_address(&address);
-        u256_to_balance(&self.nonce_of(&addr))
+        utils::u256_to_balance(&self.nonce_of(&addr))
     }
 
     pub fn nonce_of_evm_address(&self, address: String) -> u128 {
         let addr = utils::hex_to_evm_address(&address);
-        u256_to_balance(&self.nonce_of(&addr))
+        utils::u256_to_balance(&self.nonce_of(&addr))
     }
 }
 
@@ -283,27 +283,4 @@ impl EvmContract {
 
         result.map(|v| v.to_vec())
     }
-}
-
-fn attached_deposit_as_u256_opt() -> Option<U256> {
-    let attached = env::attached_deposit();
-    if attached == 0 {
-        None
-    } else {
-        Some(balance_to_u256(&attached))
-    }
-}
-
-fn balance_to_u256(val: &Balance) -> U256 {
-    let mut bin = [0u8; 32];
-    bin[16..].copy_from_slice(&val.to_be_bytes());
-    bin.into()
-}
-
-fn u256_to_balance(val: &U256) -> Balance {
-    let mut scratch = [0u8; 32];
-    let mut bin = [0u8; 16];
-    val.to_big_endian(&mut scratch);
-    bin.copy_from_slice(&scratch[16..]);
-    Balance::from_be_bytes(bin)
 }

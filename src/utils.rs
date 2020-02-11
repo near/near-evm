@@ -20,9 +20,7 @@ pub fn prefix_for_contract_storage(contract_address: &[u8]) -> Vec<u8> {
 }
 
 pub fn evm_account_to_internal_address(addr: Address) -> [u8; 20] {
-    let mut bin = [0u8; 20];
-    bin.copy_from_slice(&addr[..]);
-    bin
+    addr.0
 }
 
 pub fn near_account_bytes_to_evm_address(addr: &Vec<u8>) -> Address {

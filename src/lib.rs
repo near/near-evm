@@ -124,9 +124,9 @@ impl EvmContract {
         hex::encode(&contract_address)
     }
 
-    pub fn get_code(&self, address: String) -> Vec<u8> {
+    pub fn get_code(&self, address: String) -> String {
         let address = utils::hex_to_evm_address(&address);
-        self.code_at(&address).unwrap_or(vec![])
+        hex::encode(self.code_at(&address).unwrap_or(vec![]))
     }
 
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {

@@ -264,7 +264,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         //       return them after execution completes
         //       dispatch promises
 
-        near_bindgen::env::log(format!("evm log: {}", hex::encode(data)).as_bytes());
+        self.sub_state.state.logs.push(hex::encode(data));
         Ok(())
     }
 

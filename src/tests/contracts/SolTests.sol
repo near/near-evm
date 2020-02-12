@@ -16,6 +16,8 @@ contract ExposesBalance {
 contract SolTests is ExposesBalance {
     constructor() public payable {}
 
+    event SomeEvent(uint256 _number);
+
     function () external payable {}
 
     function deployNewGuy(uint256 _aNumber) public payable returns (address, uint256) {
@@ -32,6 +34,11 @@ contract SolTests is ExposesBalance {
     function returnSomeFunds() public payable returns (address, uint256) {
       address(msg.sender).transfer(msg.value / 2);
       return (msg.sender, msg.value);
+    }
+
+    function emitIt(uint256 _aNumber) public returns (bool) {
+      emit SomeEvent(_aNumber);
+      return true;
     }
 }
 

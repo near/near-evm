@@ -89,6 +89,9 @@ impl EvmState for EvmContract {
         self.commit_balances(&other.balances);
         self.commit_nonces(&other.nonces);
         self.commit_storages(&other.storages);
+        for log in &other.logs {
+            near_bindgen::env::log(format!("evm log: {}", log).as_bytes());
+        }
     }
 }
 

@@ -84,6 +84,7 @@ pub struct StateStore {
     pub balances: HashMap<[u8; 20], [u8; 32]>,
     pub nonces: HashMap<[u8; 20], [u8; 32]>,
     pub storages: HashMap<[u8; 20], HashMap<[u8; 32], [u8; 32]>>,
+    pub logs: Vec<String>
 }
 
 impl StateStore {
@@ -206,5 +207,6 @@ impl EvmState for SubState<'_> {
         self.state.commit_balances(&other.balances);
         self.state.commit_nonces(&other.nonces);
         self.state.commit_storages(&other.storages);
+        self.state.logs.extend(other.logs.iter().cloned());
     }
 }

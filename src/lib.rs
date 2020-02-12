@@ -124,14 +124,13 @@ impl EvmContract {
         hex::encode(&contract_address)
     }
 
-    pub fn get_code(&self, address: &Address) -> Vec<u8> {
-        self.code_at(address).expect("Contract not found")
+    pub fn get_code(&self, address: String) -> Vec<u8> {
+        let address = utils::hex_to_evm_address(&address);
+        self.code_at(&address).unwrap_or(vec![])
     }
 
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
-        let contract_address =
-            hex::decode(&contract_address).expect("contract_address must be hex");
-        let contract_address = Address::from_slice(&contract_address);
+        let contract_address = utils::hex_to_evm_address(&contract_address);
 
         let value = utils::attached_deposit_as_u256_opt();
         if let Some(val) = value {

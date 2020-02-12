@@ -38,7 +38,7 @@ pub fn near_account_id_to_internal_address(account_id: &str) -> [u8; 20] {
 }
 
 pub fn hex_to_evm_address(address: &str) -> Address {
-    let addr = hex::decode(&address).unwrap();
+    let addr = hex::decode(&address).expect("Hex string not valid hex");
     Address::from_slice(&addr)
 }
 

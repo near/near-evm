@@ -84,7 +84,7 @@ pub struct StateStore {
     pub balances: HashMap<[u8; 20], [u8; 32]>,
     pub nonces: HashMap<[u8; 20], [u8; 32]>,
     pub storages: HashMap<[u8; 20], HashMap<[u8; 32], [u8; 32]>>,
-    pub logs: Vec<String>
+    pub logs: Vec<String>,
 }
 
 impl StateStore {

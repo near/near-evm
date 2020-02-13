@@ -169,6 +169,7 @@ impl<'a> vm::Ext for NearExt<'a> {
                 self.depth,
                 receive_address,
                 &data.to_vec(),
+                true,  // shopuld_commit
             ),
             CallType::StaticCall => interpreter::static_call(
                 self.sub_state,
@@ -205,26 +206,6 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
         };
         Ok(msg_call_result)
-        //
-        // // GasLeft into MessageCallResult
-        // let res = match opt_gas_left {
-        //     Some(GasLeft::Known(gas_left)) => {
-        //         vm::MessageCallResult::Success(gas_left, ReturnData::empty())
-        //     }
-        //     Some(GasLeft::NeedsReturn {
-        //         gas_left,
-        //         data,
-        //         apply_state: true,
-        //     }) => vm::MessageCallResult::Success(gas_left, data),
-        //     Some(GasLeft::NeedsReturn {
-        //         gas_left,
-        //         data,
-        //         apply_state: false,
-        //     }) => vm::MessageCallResult::Reverted(gas_left, data),
-        //     _ => vm::MessageCallResult::Failed,
-        // };
-        //
-        // Ok(res) // Even failed is Ok. Err() is for resume traps
     }
 
     /// Returns code at given address

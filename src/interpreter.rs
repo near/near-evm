@@ -91,6 +91,7 @@ pub fn call(
     call_stack_depth: usize,
     contract_address: &Address,
     input: &Vec<u8>,
+    should_commit: bool,
 ) -> Result<ReturnData, String> {
     run_and_commit_if_success(
         state,
@@ -102,6 +103,8 @@ pub fn call(
         contract_address,
         input,
         false,
+        should_commit,
+
     )
 }
 
@@ -123,6 +126,7 @@ pub fn delegate_call(
         delegee,
         input,
         false,
+        true,
     )
 }
 
@@ -143,6 +147,7 @@ pub fn static_call(
         contract_address,
         input,
         true,
+        false,
     )
 }
 
@@ -156,6 +161,7 @@ fn run_and_commit_if_success(
     code_address: &Address,
     input: &Vec<u8>,
     is_static: bool,
+    should_commit: bool,
 ) -> Result<ReturnData, String> {
     // run the interpreter and
     let (result, state_updates) = run_against_state(
@@ -189,7 +195,7 @@ fn run_and_commit_if_success(
     };
 
     // Don't apply changes from a static context (these _should_ error in the ext)
-    if !is_static && return_data.is_ok() {
+    if !is_static && return_data.is_ok() && should_commit {
         state.commit_changes(&state_updates.unwrap());
     }
 

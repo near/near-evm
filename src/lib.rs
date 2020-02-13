@@ -177,6 +177,8 @@ impl EvmContract {
     /// continues until all EVM messages have been processed. We expect this to behave identically
     /// to an Ethereum transaction, however there may be some edge cases.
     ///
+    /// # Arguments
+    ///
     /// * `contract_address` - the hex-encoded account address to call.
     /// * `encoded_input` - The hex-encoded data field of the Ethereum transaction. This typically
     /// contains the abi-encoded contract call arguments.
@@ -186,12 +188,48 @@ impl EvmContract {
     /// * When `contract_address` or `encoded_input` is not valid hex.
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = utils::hex_to_evm_address(&contract_address);
+        let sender = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
         let value = utils::attached_deposit_as_u256_opt();
         if let Some(val) = value {
             self.add_balance(&utils::predecessor_as_evm(), val);
         }
-        let result = self.call_contract_internal(value, &contract_address, encoded_input);
+        let result = self.call_contract_internal(value, &contract_address, encoded_input, &sender, true);
+
+        match result {
+            Ok(v) => hex::encode(v),
+            Err(s) => format!("internal call failed: {}", s),
+        }
+    }
+
+    /// Make an EVM transaction. Calls `contract_address` with `encoded_input`. Execution
+    /// continues until all EVM messages have been processed. We expect this to behave identically
+    /// to an Ethereum transaction, however there may be some edge cases.
+    ///
+    /// This function serves the eth_call functionality, and will NOT apply state changes.
+    ///
+    /// # Arguments
+    ///
+    /// * `contract_address` - the hex-encoded account address to call.
+    /// * `encoded_input` - the hex-encoded data field of the Ethereum transaction. This typically
+    /// contains the abi-encoded contract call arguments.
+    /// * `sender` - the hex-encoded sender of the view call. Used to pre-flight txns as if they
+    /// were from the specified account.
+    /// * `value` - the number of yoctoNEAR to simulate the call with. Sets msg.balance, but will
+    /// NOT actually be transferred.
+    ///
+    /// # Panics
+    ///
+    /// * When `contract_address` or `encoded_input` or `sender` is not valid hex.
+    pub fn view_call_contract(&mut self, contract_address: String, encoded_input: String, sender: String, value: Balance) -> String {
+        let sender = utils::near_account_id_to_evm_address(&sender);
+        let contract_address = utils::hex_to_evm_address(&contract_address);
+        let val = match value {
+            0 => None,
+            _ => Some(U256::from(value))
+        };
+
+        let result = self.call_contract_internal(val, &contract_address, encoded_input, &sender, false);
 
         match result {
             Ok(v) => hex::encode(v),
@@ -394,6 +432,8 @@ impl EvmContract {
         value: Option<U256>,
         contract_address: &Address,
         encoded_input: String,
+        sender: &Address,
+        should_commit: bool,
     ) -> Result<Vec<u8>, String> {
         // decode
         let input = encoded_input;
@@ -402,11 +442,12 @@ impl EvmContract {
         // run
         let result = interpreter::call(
             self,
-            &utils::near_account_id_to_evm_address(&env::predecessor_account_id()),
+            sender,
             value,
             0, // call-stack depth
             &contract_address,
             &input,
+            should_commit,
         );
 
         result.map(|v| v.to_vec())

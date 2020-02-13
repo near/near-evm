@@ -17,6 +17,7 @@ use near_bindgen;
 // https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
 pub struct NearExt<'a> {
     pub info: EnvInfo,
+    pub origin: Address,
     pub schedule: Schedule,
     pub context_addr: Address,
     pub selfdestruct_address: Option<Address>,
@@ -28,12 +29,14 @@ pub struct NearExt<'a> {
 impl<'a> NearExt<'a> {
     pub fn new(
         context_addr: Address,
+        origin: Address,
         sub_state: &'a mut SubState<'a>,
         depth: usize,
         static_flag: bool,
     ) -> Self {
         Self {
             info: Default::default(),
+            origin: origin,
             schedule: Default::default(),
             context_addr,
             selfdestruct_address: Default::default(),
@@ -126,6 +129,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
         interpreter::deploy_code(
             self.sub_state,
+            &self.origin,
             &self.context_addr,
             *value,
             self.depth,
@@ -164,6 +168,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::Call => interpreter::call(
                 self.sub_state,
+                &self.origin,
                 sender_address,
                 value,
                 self.depth,
@@ -173,6 +178,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             ),
             CallType::StaticCall => interpreter::static_call(
                 self.sub_state,
+                &self.origin,
                 sender_address,
                 self.depth,
                 receive_address,
@@ -186,6 +192,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::DelegateCall => interpreter::delegate_call(
                 self.sub_state,
+                &self.origin,
                 sender_address,
                 self.depth,
                 receive_address,

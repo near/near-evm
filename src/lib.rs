@@ -152,9 +152,9 @@ impl EvmContract {
         );
 
         let val = utils::attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
-        self.add_balance(&utils::predecessor_as_evm(), val);
+        self.add_balance(&sender, val);
 
-        interpreter::deploy_code(self, &sender, val, 0, &contract_address, &code);
+        interpreter::deploy_code(self, &sender, &sender, val, 0, &contract_address, &code);
         hex::encode(&contract_address)
     }
 
@@ -442,6 +442,7 @@ impl EvmContract {
         // run
         let result = interpreter::call(
             self,
+            sender,
             sender,
             value,
             0, // call-stack depth

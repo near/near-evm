@@ -7,10 +7,10 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 use near_bindgen::collections::Map as NearMap;
 use near_bindgen::{env, ext_contract, near_bindgen as near_bindgen_macro, Promise};
-use near_vm_logic::types::{AccountId, Balance};
+use near_vm_logic::types::{AccountId};
 
 use crate::evm_state::{EvmState, StateStore};
-use crate::utils::prefix_for_contract_storage;
+use crate::utils::{Balance, prefix_for_contract_storage};
 
 #[cfg(test)]
 mod tests;
@@ -185,7 +185,7 @@ impl EvmContract {
         }
 
         Promise::new(recipient)
-            .transfer(amount)
+            .transfer(amount.0)
             .then(callback::finalize_retrieve_near(
                 addr,
                 amount.to_be_bytes().to_vec(),
@@ -208,12 +208,12 @@ impl EvmContract {
         self.sub_balance(&addr, utils::balance_to_u256(&Balance::from_be_bytes(bin)));
     }
 
-    pub fn nonce_of_near_account(&self, address: AccountId) -> u128 {
+    pub fn nonce_of_near_account(&self, address: AccountId) -> Balance {
         let addr = utils::near_account_id_to_evm_address(&address);
         utils::u256_to_balance(&self.nonce_of(&addr))
     }
 
-    pub fn nonce_of_evm_address(&self, address: String) -> u128 {
+    pub fn nonce_of_evm_address(&self, address: String) -> Balance {
         let addr = utils::hex_to_evm_address(&address);
         utils::u256_to_balance(&self.nonce_of(&addr))
     }

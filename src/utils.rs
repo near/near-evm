@@ -2,9 +2,8 @@ use ethereum_types::{Address, H256, U256};
 use keccak_hash::keccak;
 use vm::CreateContractAddress;
 
-use near_vm_logic::types::Balance;
-
 use near_bindgen::env;
+use serde::{Serialize, Deserialize, Serializer, Deserializer};
 
 pub fn predecessor_as_evm() -> Address {
     near_account_id_to_evm_address(&env::predecessor_account_id())
@@ -47,7 +46,7 @@ pub fn attached_deposit_as_u256_opt() -> Option<U256> {
     if attached == 0 {
         None
     } else {
-        Some(balance_to_u256(&attached))
+        Some(balance_to_u256(&Balance(attached)))
     }
 }
 
@@ -98,5 +97,43 @@ pub fn evm_contract_address(
             &mut buffer[20..].copy_from_slice(&code_hash[..]);
             (From::from(keccak(&buffer[..])), Some(code_hash))
         }
+    }
+}
+
+#[derive(Eq, PartialEq, Ord, PartialOrd)]
+pub struct Balance(pub u128);
+
+impl Balance {
+    pub fn from_be_bytes(bytes: [u8; 16]) -> Self {
+        Balance(u128::from_be_bytes(bytes))
+    }
+
+    pub fn to_be_bytes(&self) -> [u8; 16] {
+        self.0.to_be_bytes()
+    }
+}
+
+impl Serialize for Balance {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+        where
+            S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}", &self.0))
+    }
+}
+
+impl<'de> Deserialize<'de> for Balance {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        u128::from_str_radix(&s, 10).map(|x| Balance(x)).map_err(serde::de::Error::custom)
+    }
+}
+
+impl From<Balance> for u128 {
+    fn from(balance: Balance) -> Self {
+        balance.0
     }
 }

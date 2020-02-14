@@ -6,10 +6,10 @@ use vm::{ActionParams, ActionValue, CallType, Ext, GasLeft, ParamsType, ReturnDa
 
 use crate::evm_state::{EvmState, StateStore, SubState};
 use crate::near_ext::NearExt;
-use crate::utils;
 
 pub fn deploy_code(
     state: &mut dyn EvmState,
+    origin: &Address,
     sender: &Address,
     value: U256,
     call_stack_depth: usize,
@@ -23,7 +23,7 @@ pub fn deploy_code(
         ));
     }
 
-    let (result, state_updates) = _create(state, sender, value, call_stack_depth, address, code);
+    let (result, state_updates) = _create(state, origin, sender, value, call_stack_depth, address, code);
 
     // Apply known gas amount changes (all reverts are NeedsReturn)
     // Apply NeedsReturn changes if apply_state
@@ -46,6 +46,7 @@ pub fn deploy_code(
 
 pub fn _create(
     state: &mut dyn EvmState,
+    origin: &Address,
     sender: &Address,
     value: U256,
     call_stack_depth: usize,
@@ -59,7 +60,7 @@ pub fn _create(
         code_address: address.clone(),
         address: address.clone(),
         sender: *sender,
-        origin: utils::predecessor_as_evm(),
+        origin: *origin,
         gas: 1_000_000_000.into(),
         gas_price: 1.into(),
         value: ActionValue::Transfer(value),
@@ -72,7 +73,7 @@ pub fn _create(
 
     sub_state.transfer_balance(sender, address, value);
 
-    let mut ext = NearExt::new(*address, &mut sub_state, call_stack_depth + 1, false);
+    let mut ext = NearExt::new(*address, *origin, &mut sub_state, call_stack_depth + 1, false);
     ext.info.gas_limit = U256::from(1_000_000_000);
     ext.schedule = Schedule::new_constantinople();
 
@@ -86,14 +87,17 @@ pub fn _create(
 
 pub fn call(
     state: &mut dyn EvmState,
+    origin: &Address,
     sender: &Address,
     value: Option<U256>,
     call_stack_depth: usize,
     contract_address: &Address,
     input: &Vec<u8>,
+    should_commit: bool,
 ) -> Result<ReturnData, String> {
     run_and_commit_if_success(
         state,
+        origin,
         sender,
         value,
         call_stack_depth,
@@ -102,11 +106,14 @@ pub fn call(
         contract_address,
         input,
         false,
+        should_commit,
+
     )
 }
 
 pub fn delegate_call(
     state: &mut dyn EvmState,
+    origin: &Address,
     sender: &Address,
     call_stack_depth: usize,
     context: &Address,
@@ -115,6 +122,7 @@ pub fn delegate_call(
 ) -> Result<ReturnData, String> {
     run_and_commit_if_success(
         state,
+        origin,
         sender,
         None,
         call_stack_depth,
@@ -123,11 +131,13 @@ pub fn delegate_call(
         delegee,
         input,
         false,
+        true,
     )
 }
 
 pub fn static_call(
     state: &mut dyn EvmState,
+    origin: &Address,
     sender: &Address,
     call_stack_depth: usize,
     contract_address: &Address,
@@ -135,6 +145,7 @@ pub fn static_call(
 ) -> Result<ReturnData, String> {
     run_and_commit_if_success(
         state,
+        origin,
         sender,
         None,
         call_stack_depth,
@@ -143,11 +154,13 @@ pub fn static_call(
         contract_address,
         input,
         true,
+        false,
     )
 }
 
 fn run_and_commit_if_success(
     state: &mut dyn EvmState,
+    origin: &Address,
     sender: &Address,
     value: Option<U256>,
     call_stack_depth: usize,
@@ -156,10 +169,12 @@ fn run_and_commit_if_success(
     code_address: &Address,
     input: &Vec<u8>,
     is_static: bool,
+    should_commit: bool,
 ) -> Result<ReturnData, String> {
     // run the interpreter and
     let (result, state_updates) = run_against_state(
         state,
+        origin,
         sender,
         value,
         call_stack_depth,
@@ -189,7 +204,7 @@ fn run_and_commit_if_success(
     };
 
     // Don't apply changes from a static context (these _should_ error in the ext)
-    if !is_static && return_data.is_ok() {
+    if !is_static && return_data.is_ok() && should_commit {
         state.commit_changes(&state_updates.unwrap());
     }
 
@@ -199,6 +214,7 @@ fn run_and_commit_if_success(
 /// Runs the interpreter. Produces state diffs
 fn run_against_state(
     state: &dyn EvmState,
+    origin: &Address,
     sender: &Address,
     value: Option<U256>,
     call_stack_depth: usize,
@@ -218,7 +234,7 @@ fn run_against_state(
         code_hash: None,
         address: *state_address,
         sender: *sender,
-        origin: utils::predecessor_as_evm(),
+        origin: *origin,
         gas: 1_000_000_000.into(),
         gas_price: 1.into(),
         value: ActionValue::Apparent(0.into()),
@@ -236,6 +252,7 @@ fn run_against_state(
 
     let mut ext = NearExt::new(
         *state_address,
+        *origin,
         &mut sub_state,
         call_stack_depth + 1,
         is_static,

@@ -17,6 +17,7 @@ use near_bindgen;
 // https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
 pub struct NearExt<'a> {
     pub info: EnvInfo,
+    pub origin: Address,
     pub schedule: Schedule,
     pub context_addr: Address,
     pub selfdestruct_address: Option<Address>,
@@ -28,12 +29,14 @@ pub struct NearExt<'a> {
 impl<'a> NearExt<'a> {
     pub fn new(
         context_addr: Address,
+        origin: Address,
         sub_state: &'a mut SubState<'a>,
         depth: usize,
         static_flag: bool,
     ) -> Self {
         Self {
             info: Default::default(),
+            origin: origin,
             schedule: Default::default(),
             context_addr,
             selfdestruct_address: Default::default(),
@@ -126,6 +129,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
         interpreter::deploy_code(
             self.sub_state,
+            &self.origin,
             &self.context_addr,
             *value,
             self.depth,
@@ -164,14 +168,17 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::Call => interpreter::call(
                 self.sub_state,
+                &self.origin,
                 sender_address,
                 value,
                 self.depth,
                 receive_address,
                 &data.to_vec(),
+                true,  // shopuld_commit
             ),
             CallType::StaticCall => interpreter::static_call(
                 self.sub_state,
+                &self.origin,
                 sender_address,
                 self.depth,
                 receive_address,
@@ -185,6 +192,7 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
             CallType::DelegateCall => interpreter::delegate_call(
                 self.sub_state,
+                &self.origin,
                 sender_address,
                 self.depth,
                 receive_address,
@@ -205,26 +213,6 @@ impl<'a> vm::Ext for NearExt<'a> {
             }
         };
         Ok(msg_call_result)
-        //
-        // // GasLeft into MessageCallResult
-        // let res = match opt_gas_left {
-        //     Some(GasLeft::Known(gas_left)) => {
-        //         vm::MessageCallResult::Success(gas_left, ReturnData::empty())
-        //     }
-        //     Some(GasLeft::NeedsReturn {
-        //         gas_left,
-        //         data,
-        //         apply_state: true,
-        //     }) => vm::MessageCallResult::Success(gas_left, data),
-        //     Some(GasLeft::NeedsReturn {
-        //         gas_left,
-        //         data,
-        //         apply_state: false,
-        //     }) => vm::MessageCallResult::Reverted(gas_left, data),
-        //     _ => vm::MessageCallResult::Failed,
-        // };
-        //
-        // Ok(res) // Even failed is Ok. Err() is for resume traps
     }
 
     /// Returns code at given address
@@ -264,7 +252,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         //       return them after execution completes
         //       dispatch promises
 
-        near_bindgen::env::log(format!("evm log: {}", hex::encode(data)).as_bytes());
+        self.sub_state.state.logs.push(hex::encode(data));
         Ok(())
     }
 

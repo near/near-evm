@@ -128,12 +128,31 @@ fn test_contract_to_eoa_transfer() {
 #[test]
 fn test_get_code() {
     test_utils::run_test(0, |contract| {
-        // This test is identical to the previous one
-        // As we expect behavior to be the same.
         let test_addr = contract.deploy_code(TEST.to_string());
-        assert_eq!(contract.get_code(test_addr).len(), 3216);
+        assert_eq!(contract.get_code(test_addr).len(), 3486);
 
         let no_code_addr = "0000000000000000000000000000000000000000".to_owned();
         assert_eq!(contract.get_code(no_code_addr), "");
+    })
+}
+
+#[test]
+fn test_view_call() {
+    test_utils::run_test(0, |contract| {
+        let test_addr = contract.deploy_code(TEST.to_string());
+
+        // This should NOT increment the nonce of the deploying contract
+        // And NO CODE should be deployed
+        let (input, _) = soltest::functions::deploy_new_guy::call(8);
+        let raw = contract.view_call_contract(
+            test_addr.clone(),
+            hex::encode(input),
+            test_addr.clone(), 
+            0
+        );
+        assert_eq!(contract.nonce_of_evm_address(test_addr.clone()), 0);
+
+        let sub_addr = raw[24..64].to_string();
+        assert_eq!(contract.get_code(sub_addr), "");
     })
 }

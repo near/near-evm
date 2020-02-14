@@ -147,10 +147,10 @@ fn test_view_call() {
         let raw = contract.view_call_contract(
             test_addr.clone(),
             hex::encode(input),
-            test_addr.clone(), 
-            0
+            test_addr.clone(),
+            utils::Balance(0)
         );
-        assert_eq!(contract.nonce_of_evm_address(test_addr.clone()), 0);
+        assert_eq!(contract.nonce_of_evm_address(test_addr.clone()).0, 0);
 
         let sub_addr = raw[24..64].to_string();
         assert_eq!(contract.get_code(sub_addr), "");

@@ -225,8 +225,8 @@ impl EvmContract {
         let sender = utils::near_account_id_to_evm_address(&sender);
         let contract_address = utils::hex_to_evm_address(&contract_address);
         let val = match value {
-            0 => None,
-            _ => Some(U256::from(value))
+            Balance(0) => None,
+            Balance(v) => Some(U256::from(v))
         };
 
         let result = self.call_contract_internal(val, &contract_address, encoded_input, &sender, false);

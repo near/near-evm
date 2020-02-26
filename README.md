@@ -37,7 +37,7 @@ npm install -g near-shell
 
 * Create contract's account, e.g. we will use `evm`:
 ```shell
-near create_account evm --masterAccount=<account you used in near login/test.near for local> 
+near create_account evm --masterAccount=<account you used in near login/test.near for local>
 ```
 
 * Deploy the compiled contract from `res/near_evm.wasm` at the building step:
@@ -51,10 +51,22 @@ near deploy --accountId=evm --wasmFile=res/near_evm.wasm
 
 1. Run a local NEAR node
     1. checkout `nearcore`
-    1. `python scripts/start_unittest.py --local` 
+    1. `python scripts/start_unittest.py --local`
 1. Build the evm contract
-    1. `./build.sh` - this will build the contract code in `res/near_evm.wasm`
-1. Run the all tests including integration test
-    1. `cargo test -- --nocapture` -
+    1. `cd src/tests` and run `./build.sh`
+    1. Head back to the root directory `cd ../..` and `./build.sh` - this will build the contract code in `res/near_evm.wasm`
+2. Run the all tests including integration test
+    1. `cargo test --lib -- --nocapture` -
     this will deploy the evm contract, then deploy cryptozombies and run some functions.
 
+#### Testing on Mac
+
+You may need to install `nightly` if you get an error similar to the following:
+
+```sh
+error[E0554]: `#![feature]` may not be used on the stable release channel
+```
+
+1. Install `nightly`
+   1. `rustup toolchain install nightly`
+2. Run the [Testing](###Testing) commands again

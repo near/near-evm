@@ -1,9 +1,8 @@
 use ethereum_types::{Address, H256, U256};
 use keccak_hash::keccak;
+use near_sdk::env;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use vm::CreateContractAddress;
-
-use near_bindgen::env;
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
 
 pub fn predecessor_as_evm() -> Address {
     near_account_id_to_evm_address(&env::predecessor_account_id())

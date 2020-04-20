@@ -5,8 +5,8 @@ use vm::CreateContractAddress;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use near_bindgen::collections::Map as NearMap;
-use near_bindgen::{env, ext_contract, near_bindgen as near_bindgen_macro, Promise};
+use near_sdk::collections::Map as NearMap;
+use near_sdk::{env, ext_contract, near_bindgen as near_bindgen_macro, Promise};
 use near_vm_logic::types::{AccountId};
 
 use crate::evm_state::{EvmState, StateStore};
@@ -91,7 +91,7 @@ impl EvmState for EvmContract {
         self.commit_nonces(&other.nonces);
         self.commit_storages(&other.storages);
         for log in &other.logs {
-            near_bindgen::env::log(format!("evm log: {}", log).as_bytes());
+            near_sdk::env::log(format!("evm log: {}", log).as_bytes());
         }
     }
 }

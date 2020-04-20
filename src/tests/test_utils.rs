@@ -1,5 +1,5 @@
-use near_bindgen::MockedBlockchain;
-use near_bindgen::{testing_env, VMContext};
+use near_sdk::{testing_env, VMContext};
+use near_sdk::MockedBlockchain;
 
 use crate::EvmContract;
 
@@ -12,6 +12,7 @@ fn get_context(input: Vec<u8>) -> VMContext {
         input,
         block_index: 0,
         block_timestamp: 0,
+        epoch_height: 0,
         account_balance: 0,
         account_locked_balance: 0,
         storage_usage: 0,

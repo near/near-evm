@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use ethereum_types::{Address, H256, U256};
 use keccak_hash::keccak;
+use near_sdk;
 use parity_bytes::Bytes;
 use vm::{
     CallType, ContractCreateResult, CreateContractAddress, EnvInfo, Error as VmError,
@@ -12,7 +13,6 @@ use vm::{
 use crate::evm_state::{EvmState, SubState};
 use crate::interpreter;
 use crate::utils;
-use near_bindgen;
 
 // https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
 pub struct NearExt<'a> {
@@ -48,7 +48,7 @@ impl<'a> NearExt<'a> {
 }
 
 fn not_implemented(name: &str) {
-    near_bindgen::env::log(format!("not implemented: {}", name).as_bytes());
+    near_sdk::env::log(format!("not implemented: {}", name).as_bytes());
 }
 
 impl<'a> vm::Ext for NearExt<'a> {

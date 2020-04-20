@@ -51,7 +51,7 @@ near deploy --accountId=evm --wasmFile=res/near_evm.wasm
 
 1. Run a local NEAR node
     1. checkout `nearcore`
-    1. `python scripts/start_unittest.py --local`
+    1. `python scripts/start_unittest.py --local --release` 
 1. Build the evm contract
     1. `cd src/tests` and run `./build.sh`
     1. Head back to the root directory `cd ../..` and `./build.sh` - this will build the contract code in `res/near_evm.wasm`

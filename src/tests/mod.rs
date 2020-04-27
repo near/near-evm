@@ -19,7 +19,10 @@ fn test_sends() {
 
         assert_eq!(contract.balance_of_near_account("owner1".to_string()).0, 0);
         contract.add_near();
-        assert_eq!(contract.balance_of_near_account("owner1".to_string()).0, 100);
+        assert_eq!(
+            contract.balance_of_near_account("owner1".to_string()).0,
+            100
+        );
 
         contract.move_funds_to_evm_address(evm_acc.clone(), utils::Balance(50));
         assert_eq!(contract.balance_of_near_account("owner1".to_string()).0, 50);
@@ -27,7 +30,10 @@ fn test_sends() {
 
         contract.move_funds_to_near_account("someGuy".to_string(), utils::Balance(25));
         assert_eq!(contract.balance_of_near_account("owner1".to_string()).0, 25);
-        assert_eq!(contract.balance_of_near_account("someGuy".to_string()).0, 25);
+        assert_eq!(
+            contract.balance_of_near_account("someGuy".to_string()).0,
+            25
+        );
         // TODO: assert contract NEAR balance
     })
 }
@@ -129,7 +135,7 @@ fn test_contract_to_eoa_transfer() {
 fn test_get_code() {
     test_utils::run_test(0, |contract| {
         let test_addr = contract.deploy_code(TEST.to_string());
-        assert_eq!(contract.get_code(test_addr).len(), 3258);
+        assert!(contract.get_code(test_addr).len() > 3000);
 
         let no_code_addr = "0000000000000000000000000000000000000000".to_owned();
         assert_eq!(contract.get_code(no_code_addr), "");
@@ -148,7 +154,7 @@ fn test_view_call() {
             test_addr.clone(),
             hex::encode(input),
             test_addr.clone(),
-            utils::Balance(0)
+            utils::Balance(0),
         );
         assert_eq!(contract.nonce_of_evm_address(test_addr.clone()).0, 0);
 

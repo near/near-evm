@@ -137,6 +137,7 @@ impl EvmContract {
     ///
     /// * When `bytecode` is not valid hex.
     /// * When the contract encounters a revert during initialization
+    #[payable]
     pub fn deploy_code(&mut self, bytecode: String) -> String {
         let code = hex::decode(bytecode).expect("invalid hex");
         let sender = utils::predecessor_as_evm();
@@ -185,6 +186,7 @@ impl EvmContract {
     /// # Panics
     ///
     /// * When `contract_address` or `encoded_input` is not valid hex.
+    #[payable]
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
         let contract_address = utils::hex_to_evm_address(&contract_address);
         let sender = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
@@ -304,6 +306,7 @@ impl EvmContract {
     /// # Panics
     ///
     /// * When no NEAR is attached to the call.
+    #[payable]
     pub fn add_near(&mut self) -> Balance {
         let val = utils::attached_deposit_as_u256_opt().expect("Did not attach value");
         let addr = &utils::predecessor_as_evm();

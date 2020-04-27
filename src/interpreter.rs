@@ -7,8 +7,8 @@ use vm::{ActionParams, ActionValue, CallType, Ext, GasLeft, ParamsType, ReturnDa
 use crate::evm_state::{EvmState, StateStore, SubState};
 use crate::near_ext::NearExt;
 
-pub fn deploy_code(
-    state: &mut dyn EvmState,
+pub fn deploy_code<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: U256,
@@ -52,8 +52,8 @@ pub fn deploy_code(
     }
 }
 
-pub fn _create(
-    state: &mut dyn EvmState,
+pub fn _create<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: U256,
@@ -99,8 +99,8 @@ pub fn _create(
     (result.ok().unwrap().ok(), Some(store))
 }
 
-pub fn call(
-    state: &mut dyn EvmState,
+pub fn call<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: Option<U256>,
@@ -124,8 +124,8 @@ pub fn call(
     )
 }
 
-pub fn delegate_call(
-    state: &mut dyn EvmState,
+pub fn delegate_call<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     call_stack_depth: usize,
@@ -148,8 +148,8 @@ pub fn delegate_call(
     )
 }
 
-pub fn static_call(
-    state: &mut dyn EvmState,
+pub fn static_call<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     call_stack_depth: usize,
@@ -171,8 +171,8 @@ pub fn static_call(
     )
 }
 
-fn run_and_commit_if_success(
-    state: &mut dyn EvmState,
+fn run_and_commit_if_success<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: Option<U256>,
@@ -225,8 +225,8 @@ fn run_and_commit_if_success(
 }
 
 /// Runs the interpreter. Produces state diffs
-fn run_against_state(
-    state: &dyn EvmState,
+fn run_against_state<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: Option<U256>,

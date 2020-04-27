@@ -200,6 +200,7 @@ fn test_all_in_one() {
     let contract_user = RpcUser::new(addr, "near_evm".to_owned(), contract_signer.clone());
 
     let devnet_signer = InMemorySigner::from_seed(SIGNER_NAME, KeyType::ED25519, "alice.near");
+    let pk = devnet_signer.public_key.to_string();
     let devnet_signer = Arc::new(devnet_signer);
     let devnet_user = RpcUser::new(addr, SIGNER_NAME.to_owned(), devnet_signer.clone());
 

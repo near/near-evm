@@ -6,8 +6,7 @@ use vm::CreateContractAddress;
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use near_sdk::collections::Map as NearMap;
-use near_sdk::{env, ext_contract, near_bindgen as near_bindgen_macro, Promise};
-use near_vm_logic::types::{AccountId};
+use near_sdk::{env, ext_contract, near_bindgen as near_bindgen_macro, Promise, AccountId};
 
 use crate::evm_state::{EvmState, StateStore};
 use crate::utils::{Balance, prefix_for_contract_storage};

@@ -6,10 +6,10 @@ use vm::CreateContractAddress;
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use near_sdk::collections::Map as NearMap;
-use near_sdk::{env, ext_contract, near_bindgen as near_bindgen_macro, Promise, AccountId};
+use near_sdk::{env, ext_contract, near_bindgen as near_bindgen_macro, AccountId, Promise};
 
 use crate::evm_state::{EvmState, StateStore};
-use crate::utils::{Balance, prefix_for_contract_storage};
+use crate::utils::{prefix_for_contract_storage, Balance};
 
 #[cfg(test)]
 mod tests;
@@ -47,9 +47,9 @@ impl EvmState for EvmContract {
         self.code.get(&internal_addr.to_vec())
     }
 
-    fn set_code(&mut self, address: &Address, bytecode: &Vec<u8>) {
+    fn set_code(&mut self, address: &Address, bytecode: &[u8]) {
         let internal_addr = utils::evm_account_to_internal_address(*address);
-        self.code.insert(&internal_addr.to_vec(), bytecode);
+        self.code.insert(&internal_addr.to_vec(), &bytecode.to_vec());
     }
 
     fn _set_balance(&mut self, address: [u8; 20], balance: [u8; 32]) -> Option<[u8; 32]> {
@@ -151,7 +151,7 @@ impl EvmContract {
             &code,
         );
 
-        let val = utils::attached_deposit_as_u256_opt().unwrap_or(U256::from(0));
+        let val = utils::attached_deposit_as_u256_opt().unwrap_or_else(U256::zero);
         self.add_balance(&sender, val);
 
         interpreter::deploy_code(self, &sender, &sender, val, 0, &contract_address, &code);
@@ -170,7 +170,7 @@ impl EvmContract {
     /// * When `address` is not valid hex.
     pub fn get_code(&self, address: String) -> String {
         let address = utils::hex_to_evm_address(&address);
-        hex::encode(self.code_at(&address).unwrap_or(vec![]))
+        hex::encode(self.code_at(&address).unwrap_or_else(Vec::new))
     }
 
     /// Make an EVM transaction. Calls `contract_address` with `encoded_input`. Execution
@@ -195,7 +195,8 @@ impl EvmContract {
         if let Some(val) = value {
             self.add_balance(&utils::predecessor_as_evm(), val);
         }
-        let result = self.call_contract_internal(value, &contract_address, encoded_input, &sender, true);
+        let result =
+            self.call_contract_internal(value, &contract_address, encoded_input, &sender, true);
 
         match result {
             Ok(v) => hex::encode(v),
@@ -222,15 +223,22 @@ impl EvmContract {
     /// # Panics
     ///
     /// * When `contract_address` or `encoded_input` or `sender` is not valid hex.
-    pub fn view_call_contract(&mut self, contract_address: String, encoded_input: String, sender: String, value: Balance) -> String {
+    pub fn view_call_contract(
+        &mut self,
+        contract_address: String,
+        encoded_input: String,
+        sender: String,
+        value: Balance,
+    ) -> String {
         let sender = utils::near_account_id_to_evm_address(&sender);
         let contract_address = utils::hex_to_evm_address(&contract_address);
         let val = match value {
             Balance(0) => None,
-            Balance(v) => Some(U256::from(v))
+            Balance(v) => Some(U256::from(v)),
         };
 
-        let result = self.call_contract_internal(val, &contract_address, encoded_input, &sender, false);
+        let result =
+            self.call_contract_internal(val, &contract_address, encoded_input, &sender, false);
 
         match result {
             Ok(v) => hex::encode(v),
@@ -391,23 +399,23 @@ impl EvmContract {
 impl EvmContract {
     fn commit_code(&mut self, other: &HashMap<[u8; 20], Vec<u8>>) {
         self.code
-            .extend(other.into_iter().map(|(k, v)| (k.to_vec(), v.clone())));
+            .extend(other.iter().map(|(k, v)| (k.to_vec(), v.clone())));
     }
 
     fn commit_balances(&mut self, other: &HashMap<[u8; 20], [u8; 32]>) {
         self.balances
-            .extend(other.into_iter().map(|(k, v)| (k.to_vec(), v.clone())));
+            .extend(other.iter().map(|(k, v)| (k.to_vec(), *v)));
     }
 
     fn commit_nonces(&mut self, other: &HashMap<[u8; 20], [u8; 32]>) {
         self.nonces
-            .extend(other.into_iter().map(|(k, v)| (k.to_vec(), v.clone())));
+            .extend(other.iter().map(|(k, v)| (k.to_vec(), *v)));
     }
 
     fn commit_storages(&mut self, other: &HashMap<[u8; 20], HashMap<[u8; 32], [u8; 32]>>) {
         for (k, v) in other.iter() {
             let mut storage = self._contract_storage(*k);
-            storage.extend(v.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+            storage.extend(v.iter().map(|(k, v)| (*k, *v)));
             self.storages.insert(&k.to_vec(), &storage);
         }
     }
@@ -425,8 +433,7 @@ impl EvmContract {
 
     fn get_new_contract_storage(&self, address: [u8; 20]) -> NearMap<[u8; 32], [u8; 32]> {
         let storage_prefix = prefix_for_contract_storage(&address);
-        let storage = NearMap::<[u8; 32], [u8; 32]>::new(storage_prefix);
-        storage
+        NearMap::<[u8; 32], [u8; 32]>::new(storage_prefix)
     }
 
     fn call_contract_internal(

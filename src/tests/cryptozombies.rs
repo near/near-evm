@@ -1,8 +1,8 @@
 use ethabi::{Address, Uint};
 use ethabi_contract::use_contract;
 
-use crate::EvmContract;
 use crate::utils;
+use crate::EvmContract;
 
 use super::test_utils;
 

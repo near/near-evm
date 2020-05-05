@@ -23,7 +23,7 @@ pub fn evm_account_to_internal_address(addr: Address) -> [u8; 20] {
     addr.0
 }
 
-pub fn near_account_bytes_to_evm_address(addr: &Vec<u8>) -> Address {
+pub fn near_account_bytes_to_evm_address(addr: &[u8]) -> Address {
     Address::from_slice(&keccak(addr)[12..])
 }
 
@@ -84,16 +84,16 @@ pub fn evm_contract_address(
             let code_hash = keccak(code);
             let mut buffer = [0u8; 1 + 20 + 32 + 32];
             buffer[0] = 0xff;
-            &mut buffer[1..(1 + 20)].copy_from_slice(&sender[..]);
-            &mut buffer[(1 + 20)..(1 + 20 + 32)].copy_from_slice(&salt[..]);
-            &mut buffer[(1 + 20 + 32)..].copy_from_slice(&code_hash[..]);
+            buffer[1..(1 + 20)].copy_from_slice(&sender[..]);
+            buffer[(1 + 20)..(1 + 20 + 32)].copy_from_slice(&salt[..]);
+            buffer[(1 + 20 + 32)..].copy_from_slice(&code_hash[..]);
             (From::from(keccak(&buffer[..])), Some(code_hash))
         }
         CreateContractAddress::FromSenderAndCodeHash => {
             let code_hash = keccak(code);
             let mut buffer = [0u8; 20 + 32];
-            &mut buffer[..20].copy_from_slice(&sender[..]);
-            &mut buffer[20..].copy_from_slice(&code_hash[..]);
+            buffer[..20].copy_from_slice(&sender[..]);
+            buffer[20..].copy_from_slice(&code_hash[..]);
             (From::from(keccak(&buffer[..])), Some(code_hash))
         }
     }
@@ -114,8 +114,8 @@ impl Balance {
 
 impl Serialize for Balance {
     fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         serializer.serialize_str(&format!("{}", &self.0))
     }
@@ -123,11 +123,13 @@ impl Serialize for Balance {
 
 impl<'de> Deserialize<'de> for Balance {
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        u128::from_str_radix(&s, 10).map(|x| Balance(x)).map_err(serde::de::Error::custom)
+        u128::from_str_radix(&s, 10)
+            .map(Balance)
+            .map_err(serde::de::Error::custom)
     }
 }
 

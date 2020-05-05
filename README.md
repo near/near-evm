@@ -49,17 +49,24 @@ near deploy --accountId=evm --wasmFile=res/near_evm.wasm
 
 ### Testing
 
-1. Run a local NEAR node
-    1. checkout `nearcore`
-    1. `python scripts/start_unittest.py --local --release` 
 1. Build the evm contract
-    1. `cd src/tests` and run `./build.sh`
-    1. Head back to the root directory `cd ../..` and `./build.sh` - this will build the contract code in `res/near_evm.wasm`
-2. Run the all tests including integration test
-    1. `cargo test --lib -- --nocapture` -
-    this will deploy the evm contract, then deploy cryptozombies and run some functions.
+    1. Ensure truffle is installed
+      - `npm i -g truffle`
+    1. Build the test contracts
+      `cd src/tests && ./build.sh`
+    1. build the Near EVM contract binary
+      - `cd ../.. && ./build.sh`
+1. Run the all tests including integration test
+    1. `cargo test --lib`
+1. To run the RPC tests:
+    1. Run a local NEAR node
+      1. check out `nearcore` from github
+      1. compile and run `nearcore`
+        - `cd nearcore && python scripts/start_unittest.py --local --release`
+    1. Run the tests from this directory in another terminal window:
+      - `cargo test`
 
-#### Testing on Mac
+#### Troubleshooting
 
 You may need to install `nightly` if you get an error similar to the following:
 

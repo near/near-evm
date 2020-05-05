@@ -1,5 +1,5 @@
-use near_sdk::{testing_env, VMContext};
 use near_sdk::MockedBlockchain;
+use near_sdk::{testing_env, VMContext};
 
 use crate::EvmContract;
 

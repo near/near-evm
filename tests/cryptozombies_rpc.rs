@@ -48,7 +48,15 @@ fn deploy_evm(contract_user: &RpcUser) {
     let contract = EVM.to_vec();
     let tx_result = contract_user.deploy_contract(CONTRACT_NAME.to_owned(), contract);
     if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
-        println!("Deploy Evm Success, gas = {}", tx_result.as_ref().unwrap().transaction_outcome.outcome.gas_burnt);
+        println!(
+            "Deploy Evm Success, gas = {}",
+            tx_result
+                .as_ref()
+                .unwrap()
+                .transaction_outcome
+                .outcome
+                .gas_burnt
+        );
     } else {
         panic!(format!("Deploy Evm Failed {:?}", tx_result));
     }
@@ -71,7 +79,16 @@ fn deploy_cryptozombies(client: &RpcUser) -> String {
         let bytes = from_base64(base64).unwrap();
         let addr_bytes = bytes[1..bytes.len() - 1].to_vec();
         let address = String::from_utf8(addr_bytes).unwrap();
-        println!("deploy_code(cryptozombies): {}, gas burnt: {}\n", address, tx_result.as_ref().unwrap().transaction_outcome.outcome.gas_burnt);
+        println!(
+            "deploy_code(cryptozombies): {}, gas burnt: {}\n",
+            address,
+            tx_result
+                .as_ref()
+                .unwrap()
+                .transaction_outcome
+                .outcome
+                .gas_burnt
+        );
         address
     } else {
         panic!(format!(
@@ -97,7 +114,15 @@ fn create_random_zombie(client: &RpcUser, zombies_address: &str, name: &str) {
         0,
     );
     if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
-        println!("createRandomZombie Success, gas burnt: {}", tx_result.as_ref().unwrap().transaction_outcome.outcome.gas_burnt);
+        println!(
+            "createRandomZombie Success, gas burnt: {}",
+            tx_result
+                .as_ref()
+                .unwrap()
+                .transaction_outcome
+                .outcome
+                .gas_burnt
+        );
     } else {
         panic!(format!("createRandomZombie Failed {:?}", tx_result));
     }
@@ -139,7 +164,15 @@ fn add_near(client: &RpcUser) {
         100_000_000,
     );
     if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
-        println!("Add Near Success, gas burnt: {}", tx_result.as_ref().unwrap().transaction_outcome.outcome.gas_burnt);
+        println!(
+            "Add Near Success, gas burnt: {}",
+            tx_result
+                .as_ref()
+                .unwrap()
+                .transaction_outcome
+                .outcome
+                .gas_burnt
+        );
     } else {
         panic!(format!("Add Near Failed {:?}", tx_result));
     }
@@ -160,7 +193,15 @@ fn retrieve_near(client: &RpcUser) {
         0,
     );
     if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
-        println!("Retrieve Near Success, gas burnt: {}", tx_result.as_ref().unwrap().transaction_outcome.outcome.gas_burnt);
+        println!(
+            "Retrieve Near Success, gas burnt: {}",
+            tx_result
+                .as_ref()
+                .unwrap()
+                .transaction_outcome
+                .outcome
+                .gas_burnt
+        );
     } else {
         panic!(format!("Retrieve Near Failed {:?}", tx_result));
     }
@@ -184,7 +225,17 @@ fn evm_balance_of_near_account(client: &RpcUser, account: String) -> u128 {
             .unwrap();
         let balance_str = serde_json::from_str(&json_rep).expect("Failed to parse JSON response");
         let balance = u128::from_str_radix(balance_str, 10).expect("Failed to parse integer");
-        println!("evm_balance_of_near_account {} {:?}, gas burnt: {}", account, balance, tx_result.as_ref().unwrap().transaction_outcome.outcome.gas_burnt);
+        println!(
+            "evm_balance_of_near_account {} {:?}, gas burnt: {}",
+            account,
+            balance,
+            tx_result
+                .as_ref()
+                .unwrap()
+                .transaction_outcome
+                .outcome
+                .gas_burnt
+        );
         balance
     } else {
         panic!(tx_result)

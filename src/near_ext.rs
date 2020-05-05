@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use ethereum_types::{Address, H256, U256};
 use keccak_hash::keccak;
-use near_sdk;
 use parity_bytes::Bytes;
 use vm::{
     CallType, ContractCreateResult, CreateContractAddress, EnvInfo, Error as VmError,
@@ -36,7 +35,7 @@ impl<'a> NearExt<'a> {
     ) -> Self {
         Self {
             info: Default::default(),
-            origin: origin,
+            origin,
             schedule: Default::default(),
             context_addr,
             selfdestruct_address: Default::default(),
@@ -121,7 +120,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         // TODO: move this into deploy_code
         if address_type == CreateContractAddress::FromSenderAndNonce {
             nonce = self.sub_state.next_nonce(&self.context_addr);
-        }
+        };
 
         // discarded argument here is the codehash.
         // CONSIDER: storing codehash instead of calculating
@@ -174,7 +173,7 @@ impl<'a> vm::Ext for NearExt<'a> {
                 self.depth,
                 receive_address,
                 &data.to_vec(),
-                true,  // shopuld_commit
+                true, // shopuld_commit
             ),
             CallType::StaticCall => interpreter::static_call(
                 self.sub_state,
@@ -217,7 +216,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
     /// Returns code at given address
     fn extcode(&self, address: &Address) -> EvmResult<Option<Arc<Bytes>>> {
-        let code = self.sub_state.code_at(address).map(|c| Arc::new(c));
+        let code = self.sub_state.code_at(address).map(Arc::new);
         Ok(code)
     }
 
@@ -228,11 +227,11 @@ impl<'a> vm::Ext for NearExt<'a> {
             Some(code) => code,
             None => return Ok(None),
         };
-        if code.len() == 0 {
-            return Ok(None);
+        if code.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(keccak(code)))
         }
-
-        return Ok(Some(keccak(code)));
     }
 
     /// Returns code size at given address

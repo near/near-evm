@@ -7,14 +7,14 @@ use vm::{ActionParams, ActionValue, CallType, Ext, GasLeft, ParamsType, ReturnDa
 use crate::evm_state::{EvmState, StateStore, SubState};
 use crate::near_ext::NearExt;
 
-pub fn deploy_code(
-    state: &mut dyn EvmState,
+pub fn deploy_code<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: U256,
     call_stack_depth: usize,
     address: &Address,
-    code: &Vec<u8>,
+    code: &[u8],
 ) {
     if state.code_at(address).is_some() {
         panic!(format!(
@@ -23,7 +23,15 @@ pub fn deploy_code(
         ));
     }
 
-    let (result, state_updates) = _create(state, origin, sender, value, call_stack_depth, address, code);
+    let (result, state_updates) = _create(
+        state,
+        origin,
+        sender,
+        value,
+        call_stack_depth,
+        address,
+        code,
+    );
 
     // Apply known gas amount changes (all reverts are NeedsReturn)
     // Apply NeedsReturn changes if apply_state
@@ -44,21 +52,21 @@ pub fn deploy_code(
     }
 }
 
-pub fn _create(
-    state: &mut dyn EvmState,
+pub fn _create<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: U256,
     call_stack_depth: usize,
     address: &Address,
-    code: &Vec<u8>,
+    code: &[u8],
 ) -> (Option<GasLeft>, Option<StateStore>) {
     let mut store = StateStore::default();
     let mut sub_state = SubState::new(sender, &mut store, state);
 
     let params = ActionParams {
-        code_address: address.clone(),
-        address: address.clone(),
+        code_address: *address,
+        address: *address,
         sender: *sender,
         origin: *origin,
         gas: 1_000_000_000.into(),
@@ -73,7 +81,13 @@ pub fn _create(
 
     sub_state.transfer_balance(sender, address, value);
 
-    let mut ext = NearExt::new(*address, *origin, &mut sub_state, call_stack_depth + 1, false);
+    let mut ext = NearExt::new(
+        *address,
+        *origin,
+        &mut sub_state,
+        call_stack_depth + 1,
+        false,
+    );
     ext.info.gas_limit = U256::from(1_000_000_000);
     ext.schedule = Schedule::new_constantinople();
 
@@ -85,14 +99,14 @@ pub fn _create(
     (result.ok().unwrap().ok(), Some(store))
 }
 
-pub fn call(
-    state: &mut dyn EvmState,
+pub fn call<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: Option<U256>,
     call_stack_depth: usize,
     contract_address: &Address,
-    input: &Vec<u8>,
+    input: &[u8],
     should_commit: bool,
 ) -> Result<ReturnData, String> {
     run_and_commit_if_success(
@@ -107,18 +121,17 @@ pub fn call(
         input,
         false,
         should_commit,
-
     )
 }
 
-pub fn delegate_call(
-    state: &mut dyn EvmState,
+pub fn delegate_call<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     call_stack_depth: usize,
     context: &Address,
     delegee: &Address,
-    input: &Vec<u8>,
+    input: &[u8],
 ) -> Result<ReturnData, String> {
     run_and_commit_if_success(
         state,
@@ -135,13 +148,13 @@ pub fn delegate_call(
     )
 }
 
-pub fn static_call(
-    state: &mut dyn EvmState,
+pub fn static_call<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     call_stack_depth: usize,
     contract_address: &Address,
-    input: &Vec<u8>,
+    input: &[u8],
 ) -> Result<ReturnData, String> {
     run_and_commit_if_success(
         state,
@@ -158,8 +171,8 @@ pub fn static_call(
     )
 }
 
-fn run_and_commit_if_success(
-    state: &mut dyn EvmState,
+fn run_and_commit_if_success<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: Option<U256>,
@@ -167,7 +180,7 @@ fn run_and_commit_if_success(
     call_type: CallType,
     state_address: &Address,
     code_address: &Address,
-    input: &Vec<u8>,
+    input: &[u8],
     is_static: bool,
     should_commit: bool,
 ) -> Result<ReturnData, String> {
@@ -208,12 +221,12 @@ fn run_and_commit_if_success(
         state.commit_changes(&state_updates.unwrap());
     }
 
-    return return_data;
+    return_data
 }
 
 /// Runs the interpreter. Produces state diffs
-fn run_against_state(
-    state: &dyn EvmState,
+fn run_against_state<T: EvmState>(
+    state: &mut T,
     origin: &Address,
     sender: &Address,
     value: Option<U256>,
@@ -221,10 +234,10 @@ fn run_against_state(
     call_type: CallType,
     state_address: &Address,
     code_address: &Address,
-    input: &Vec<u8>,
+    input: &[u8],
     is_static: bool,
 ) -> (Option<GasLeft>, Option<StateStore>) {
-    let code = state.code_at(code_address).unwrap_or(vec![]);
+    let code = state.code_at(code_address).unwrap_or_else(Vec::new);
 
     let mut store = StateStore::default();
     let mut sub_state = SubState::new(sender, &mut store, state);

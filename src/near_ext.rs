@@ -99,9 +99,10 @@ impl<'a> vm::Ext for NearExt<'a> {
         Ok(self.sub_state.balance_of(address))
     }
 
-    fn blockhash(&mut self, _number: &U256) -> H256 {
-        not_implemented("blockhash");
-        unimplemented!()
+    fn blockhash(&mut self, number: &U256) -> H256 {
+        let mut buf = [0u8; 32];
+        number.to_big_endian(&mut buf);
+        keccak(&buf[..])
     }
 
     fn create(

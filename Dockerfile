@@ -10,6 +10,8 @@ RUN rustup default nightly-2020-03-19
 
 COPY Cargo.toml ./
 COPY Cargo.lock ./
+COPY src/tests/build ./src/tests/build/
+COPY build.sh ./
 
 RUN apt-get update && \
     apt-get upgrade -y && \
@@ -19,7 +21,9 @@ RUN apt-get update && \
     echo "fn main() {}" > src/lib.rs && \
     mkdir -p src/tests && \
     echo "#[test] fn test_mock() {assert_eq(4, 4)}" > src/tests/mod.rs && \
-    cargo build -Z unstable-options --out-dir /output && \
+    rustup target add wasm32-unknown-unknown && \
+    cargo build --target wasm32-unknown-unknown --release && \
+    ./build.sh && \
     cargo test --lib
 
 FROM rust:1.43-buster
@@ -31,11 +35,20 @@ RUN rustup default nightly-2020-03-19
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y clang && \
-    apt-get install -y libclang-3.9-dev clang-3.9
+    apt-get install -y libssl-dev libclang-3.9-dev clang-3.9 && \
+    rustup target add wasm32-unknown-unknown && rustup component add rustfmt
 
-COPY --from=build /usr/src/near-evm/target/debug/deps ./target/debug/deps
+
+COPY --from=build /usr/src/near-evm/target/ ./target/
+COPY --from=build /usr/src/near-evm/res/ ./res/
+COPY --from=build /usr/src/near-evm/Cargo.toml ./Cargo.toml
+COPY --from=build /usr/src/near-evm/Cargo.lock ./Cargo.lock
+
+
 # this hacky hack worked for a smaller test repo, but this repo still rebuilds from scratch.
 RUN cd target/debug/deps && rm *near_evm* && cd ../../..
 
-COPY . .
-RUN cargo test --lib
+COPY src/ ./src/
+
+RUN cargo build --target wasm32-unknown-unknown --release && \
+    cargo test --lib

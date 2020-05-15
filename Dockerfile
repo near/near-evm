@@ -21,12 +21,11 @@ COPY Cargo.lock ./
 RUN mkdir -p src/tests/contracts
 
 # compile solidity
-COPY --from=solc /usr/local/bin/solc ./
-COPY src/tests/solcBuild ./src/tests/
-ENV PATH="/usr/src/near-evm:${PATH}"
+COPY --from=solc /usr/local/bin/solc /usr/local/bin/solc
+COPY src/tests/build.sh ./src/tests/
 COPY src/tests/contracts/SolTests.sol ./src/tests/contracts/
 RUN cd src/tests && \
-    ./solcBuild && \
+    ./build.sh && \
     cd ../../
 
 # dummy test and src
@@ -41,9 +40,12 @@ FROM rust:1.43-buster
 WORKDIR /usr/src/near-evm
 
 RUN rustup default nightly-2020-03-19
+RUN rm -rf src
 
 RUN mkdir ./target
 COPY --from=build /usr/src/near-evm/target/debug ./target/debug
+
+RUN rm target/debug/deps/near_evm**
 
 RUN rm -rf /usr/local/cargo
 COPY --from=build /usr/local/cargo /usr/local/cargo

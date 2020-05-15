@@ -135,7 +135,7 @@ fn test_contract_to_eoa_transfer() {
 fn test_get_code() {
     test_utils::run_test(0, |contract| {
         let test_addr = contract.deploy_code(TEST.to_string());
-        assert!(contract.get_code(test_addr).len() > 3000);
+        assert!(contract.get_code(test_addr).len() > 3002);
 
         let no_code_addr = "0000000000000000000000000000000000000000".to_owned();
         assert_eq!(contract.get_code(no_code_addr), "");

@@ -1,16 +1,11 @@
 language: rust
-cache:
-    directories:
-        - $TRAVIS_BUILD_DIR/target
-        - /home/travis/.cargo
 rust:
-  - nightly-2020-03-19
+   - stable
+services:
+   - docker
 install:
-  - rustup target add wasm32-unknown-unknownsudo
-  - add-apt-repository ppa:ethereum/ethereum
-  - apt-get update && apt-get install solc
+    - docker pull emag3m/near-evm:build
 before_script:
-  - cargo build --target wasm32-unknown-unknown --release # ./build.sh needs target/wasm32-unknown-unknown/release/near_evm.wasm
-  - cd src/tests && ./build.sh && cd ../.. && ./build.sh
+   - docker build . --cache-from=near-evm:build -t near-evm:0.1.0
 script:
-  - cargo test --lib
+   - docker run near-evm:0.1.0 /bin/sh -c "cargo test --lib"

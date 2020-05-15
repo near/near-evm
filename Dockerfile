@@ -54,5 +54,3 @@ COPY --from=build /usr/src/near-evm/Cargo.toml ./
 COPY --from=build /usr/src/near-evm/Cargo.lock ./
 
 COPY src src
-
-RUN cargo test --lib

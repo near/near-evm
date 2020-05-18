@@ -1,5 +1,3 @@
-FROM ethereum/solc:0.5.17-alpine AS solc
-
 FROM rust:1.43-buster AS build
 
 WORKDIR /usr/src/near-evm
@@ -15,14 +13,6 @@ COPY Cargo.toml ./
 COPY Cargo.lock ./
 
 RUN mkdir -p src/tests/contracts
-
-# compile solidity
-COPY --from=solc /usr/local/bin/solc /usr/local/bin/solc
-COPY src/tests/build.sh ./src/tests/
-COPY src/tests/contracts/SolTests.sol ./src/tests/contracts/
-RUN cd src/tests && \
-    ./build.sh && \
-    cd ../../
 
 # dummy test and src
 RUN echo "fn main() {}" > src/lib.rs

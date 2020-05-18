@@ -4,7 +4,6 @@ rust:
 services:
    - docker
 install:
-   - docker pull ethereum/solc:0.5.17-alpine
    - docker pull rust:1.43-buster
    - docker pull emag3m/near-evm:build
 before_script:

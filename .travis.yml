@@ -6,19 +6,7 @@ services:
 install:
    - docker pull emag3m/near-evm:build
 before_script:
-   - docker images 2>&1
    - docker images
-   - docker build . --cache-from=4bd6509257aa -t near-evm:0.1.0
+   - docker build --pull --cache-from 4bd6509257aa --tag emag3m/near-evm:0.1.0 .
 script:
-   - docker run near-evm:0.1.0 /bin/sh -c "cargo test --lib"
-cache:
-  bundler: true
-  directories:
-      - $HOME/docker
-before_cache:
-  - >
-    mkdir -p $HOME/docker && docker images -a --filter='dangling=false' --format '{{.Repository}}:{{.Tag}} {{.ID}}'
-    | xargs -n 2 -t sh -c 'test -e $HOME/docker/$1.tar.gz || docker save $0 | gzip -2 > $HOME/docker/$1.tar.gz'
-before_install:
-  # Load cached docker images
-  - if [[ -d $HOME/docker ]]; then ls $HOME/docker/*.tar.gz | xargs -I {file} sh -c "zcat {file} | docker load"; fi
+   - docker run emag3m/near-evm:0.1.0 /bin/sh -c "cargo test --lib"

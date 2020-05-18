@@ -7,6 +7,7 @@ install:
    - docker pull rust:1.43-buster
    - docker pull emag3m/near-evm:build
    - find Cargo* -type f | xargs touch -t 7805200000
+   - ls -l
 before_script:
    - docker build --cache-from emag3m/near-evm:build --tag emag3m/near-evm:0.1.0 .
 script:

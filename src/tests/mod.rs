@@ -6,11 +6,11 @@ use crate::utils;
 mod cryptozombies;
 mod test_utils;
 
-use_contract!(soltest, "src/tests/build/soltests.abi");
-use_contract!(subcontract, "src/tests/build/subcontract.abi");
+use_contract!(soltest, "src/tests/build/SolTests.abi");
+use_contract!(subcontract, "src/tests/build/SubContract.abi");
 
-lazy_static_include_str!(TEST, "src/tests/build/soltests.bin");
-lazy_static_include_str!(SUB_TEST, "src/tests/build/subcontract.bin");
+lazy_static_include_str!(TEST, "src/tests/build/SolTests.bin");
+lazy_static_include_str!(SUB_TEST, "src/tests/build/SubContract.bin");
 
 #[test]
 fn test_sends() {

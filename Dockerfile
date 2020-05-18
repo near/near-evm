@@ -28,7 +28,6 @@ RUN cd src/tests && \
 RUN echo "fn main() {}" > src/lib.rs
 RUN echo "#[test] fn test_mock() {assert_eq(4, 4)}" > src/tests/mod.rs
 
-RUN cargo update
 RUN cargo test --lib
 
 FROM rust:1.43-buster

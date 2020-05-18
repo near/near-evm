@@ -4,13 +4,11 @@ rust:
 services:
    - docker
 install:
-   - docker images 2>&1
-   - docker images 1>&2
    - docker pull emag3m/near-evm:build
 before_script:
    - docker images 2>&1
-   - docker images 1>&2
-   - docker build . --cache-from=emag3m/near-evm:build -t near-evm:0.1.0
+   - docker images
+   - docker build . --cache-from=4bd6509257aa -t near-evm:0.1.0
 script:
    - docker run near-evm:0.1.0 /bin/sh -c "cargo test --lib"
 cache:

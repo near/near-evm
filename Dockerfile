@@ -1,7 +1,3 @@
-# Process from terminal:
-# $ docker build . --target build -t near-evm:build
-# $ docker build . --cache-from=near-evm:build -t near-evm:0.1.0
-
 FROM ethereum/solc:0.5.17-alpine AS solc
 
 FROM rust:1.43-buster AS build

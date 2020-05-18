@@ -7,6 +7,6 @@ install:
    - docker pull emag3m/near-evm:build
 before_script:
    - docker images
-   - docker build --pull --cache-from 4bd6509257aa --tag emag3m/near-evm:0.1.0 .
+   - docker build --cache-from f2b8cab0294d --tag emag3m/near-evm:0.1.0 .
 script:
    - docker run emag3m/near-evm:0.1.0 /bin/sh -c "cargo test --lib"

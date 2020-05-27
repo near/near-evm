@@ -14,6 +14,7 @@ use crate::interpreter;
 use crate::utils;
 
 // https://github.com/paritytech/parity-ethereum/blob/77643c13e80ca09d9a6b10631034f5a1568ba6d3/ethcore/machine/src/externalities.rs
+// #[derive(Debug)]
 pub struct NearExt<'a> {
     pub info: EnvInfo,
     pub origin: Address,
@@ -174,7 +175,7 @@ impl<'a> vm::Ext for NearExt<'a> {
                 self.depth,
                 receive_address,
                 &data.to_vec(),
-                true, // shopuld_commit
+                true, // should_commit
             ),
             CallType::StaticCall => interpreter::static_call(
                 self.sub_state,

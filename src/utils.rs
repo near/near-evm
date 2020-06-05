@@ -4,19 +4,19 @@ use near_sdk::env;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use vm::CreateContractAddress;
 
+pub fn internal_storage_key(address: &Address, key: [u8; 32]) -> [u8; 52] {
+    let mut k = [0u8; 52];
+    k[..20].copy_from_slice(address.as_ref());
+    k[20..].copy_from_slice(&key);
+    k
+}
+
 pub fn predecessor_as_evm() -> Address {
     near_account_id_to_evm_address(&env::predecessor_account_id())
 }
 
 pub fn predecessor_as_internal_address() -> [u8; 20] {
     near_account_id_to_internal_address(&env::predecessor_account_id())
-}
-
-pub fn prefix_for_contract_storage(contract_address: &[u8]) -> Vec<u8> {
-    let mut prefix = Vec::new();
-    prefix.extend_from_slice(b"_storage");
-    prefix.extend_from_slice(contract_address);
-    prefix
 }
 
 pub fn evm_account_to_internal_address(addr: Address) -> [u8; 20] {
@@ -99,7 +99,7 @@ pub fn evm_contract_address(
     }
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Eq, PartialEq, Debug, Ord, PartialOrd)]
 pub struct Balance(pub u128);
 
 impl Balance {

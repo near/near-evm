@@ -1,15 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use ethereum_types::{Address, U256};
 use vm::CreateContractAddress;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use near_sdk::collections::Map as NearMap;
+use near_sdk::collections::{TreeMap as NearTreeMap, UnorderedMap as NearMap};
 use near_sdk::{env, ext_contract, near_bindgen as near_bindgen_macro, AccountId, Promise};
 
 use crate::evm_state::{EvmState, StateStore};
-use crate::utils::{prefix_for_contract_storage, Balance};
+use crate::utils::Balance;
 
 #[cfg(test)]
 mod tests;
@@ -32,7 +32,7 @@ pub struct EvmContract {
     code: NearMap<Vec<u8>, Vec<u8>>,
     balances: NearMap<Vec<u8>, [u8; 32]>,
     nonces: NearMap<Vec<u8>, [u8; 32]>,
-    storages: NearMap<Vec<u8>, NearMap<[u8; 32], [u8; 32]>>,
+    storages: NearTreeMap<Vec<u8>, [u8; 32]>,
 }
 
 #[ext_contract]
@@ -49,7 +49,8 @@ impl EvmState for EvmContract {
 
     fn set_code(&mut self, address: &Address, bytecode: &[u8]) {
         let internal_addr = utils::evm_account_to_internal_address(*address);
-        self.code.insert(&internal_addr.to_vec(), &bytecode.to_vec());
+        self.code
+            .insert(&internal_addr.to_vec(), &bytecode.to_vec());
     }
 
     fn _set_balance(&mut self, address: [u8; 20], balance: [u8; 32]) -> Option<[u8; 32]> {
@@ -71,20 +72,17 @@ impl EvmState for EvmContract {
     }
 
     // Default storage of None
-    fn read_contract_storage(&self, address: &Address, key: [u8; 32]) -> Option<[u8; 32]> {
-        self.contract_storage(address).get(&key)
+    fn _read_contract_storage(&self, key: [u8; 52]) -> Option<[u8; 32]> {
+        self.storages.get(&key.to_vec())
     }
 
-    fn set_contract_storage(
-        &mut self,
-        address: &Address,
-        key: [u8; 32],
-        value: [u8; 32],
-    ) -> Option<[u8; 32]> {
-        self.contract_storage(address).insert(&key, &value)
+    fn _set_contract_storage(&mut self, key: [u8; 52], value: [u8; 32]) -> Option<[u8; 32]> {
+        self.storages.insert(&key.to_vec(), &value)
     }
 
     fn commit_changes(&mut self, other: &StateStore) {
+        self.commit_self_destructs(&other.self_destructs);
+        self.commit_self_destructs(&other.recreated);
         self.commit_code(&other.code);
         self.commit_balances(&other.balances);
         self.commit_nonces(&other.nonces);
@@ -95,7 +93,6 @@ impl EvmState for EvmContract {
     }
 }
 
-#[near_bindgen_macro]
 /// The EVM contract public interface. Generally, the EVM handles ethereum-style 20-byte
 /// hex-encoded addresses. External Near accountIDs are converted to EVM addresses by hashing
 /// them, and taking the final 20 bytes of the hash. Which is to say, they roughly correspond to
@@ -103,6 +100,7 @@ impl EvmState for EvmContract {
 ///
 /// The EVM holds NEAR and keeps an internal balances mapping to all EVM accounts. Therefore EVM
 /// contracts can hold NEAR and interact with it.
+#[near_bindgen_macro]
 impl EvmContract {
     /// Returns the storage at a particular slot, as a hex-encoded. Slots are 32-bytes wide,
     /// empty slots will be all 0s.
@@ -439,28 +437,39 @@ impl EvmContract {
             .extend(other.iter().map(|(k, v)| (k.to_vec(), *v)));
     }
 
-    fn commit_storages(&mut self, other: &HashMap<[u8; 20], HashMap<[u8; 32], [u8; 32]>>) {
+    fn commit_storages(&mut self, other: &BTreeMap<Vec<u8>, [u8; 32]>) {
         for (k, v) in other.iter() {
-            let mut storage = self._contract_storage(*k);
-            storage.extend(v.iter().map(|(k, v)| (*k, *v)));
-            self.storages.insert(&k.to_vec(), &storage);
+            self.storages.insert(k, v);
         }
     }
 
-    fn _contract_storage(&self, address: [u8; 20]) -> NearMap<[u8; 32], [u8; 32]> {
-        self.storages
-            .get(&address.to_vec())
-            .unwrap_or_else(|| self.get_new_contract_storage(address))
+    fn clear_contract_storage(&mut self, address_key: Vec<u8>) {
+        let mut next_address_key = address_key.clone();
+        *(next_address_key.last_mut().unwrap()) += 1;
+
+        let range = (
+            std::ops::Bound::Excluded(address_key),
+            std::ops::Bound::Excluded(next_address_key),
+        );
+
+        let keys: Vec<_> = self.storages.range(range).map(|(k, _)| k).collect();
+        for k in keys.iter() {
+            self.storages.remove(k);
+        }
     }
 
-    fn contract_storage(&self, address: &Address) -> NearMap<[u8; 32], [u8; 32]> {
-        let internal_addr = utils::evm_account_to_internal_address(*address);
-        self._contract_storage(internal_addr)
+    fn clear_contract_info(&mut self, addr: &[u8; 20]) {
+        let key = addr.to_vec();
+        self.nonces.remove(&key);
+        self.balances.remove(&key);
+        self.code.remove(&key);
+        self.clear_contract_storage(key);
     }
 
-    fn get_new_contract_storage(&self, address: [u8; 20]) -> NearMap<[u8; 32], [u8; 32]> {
-        let storage_prefix = prefix_for_contract_storage(&address);
-        NearMap::<[u8; 32], [u8; 32]>::new(storage_prefix)
+    fn commit_self_destructs(&mut self, other: &HashSet<[u8; 20]>) {
+        for addr in other.iter() {
+            self.clear_contract_info(addr)
+        }
     }
 
     fn call_contract_internal(

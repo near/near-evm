@@ -1,7 +1,7 @@
 use ethabi_contract::use_contract;
-use ethereum_types::U256;
+use ethereum_types::{Address, U256};
 
-use crate::utils;
+use crate::{evm_state::*, utils};
 
 mod cryptozombies;
 mod test_utils;
@@ -160,5 +160,100 @@ fn test_view_call() {
 
         let sub_addr = raw[24..64].to_string();
         assert_eq!(contract.get_code(sub_addr), "");
+    })
+}
+
+#[test]
+fn state_management() {
+    test_utils::run_test(0, |contract| {
+
+        let addr_0 = Address::repeat_byte(0);
+        let addr_1 = Address::repeat_byte(1);
+        let addr_2 = Address::repeat_byte(2);
+        // let addr_3 = Address::repeat_byte(3);
+        let zero = U256::zero();
+        let code: [u8; 3] = [0, 1, 2];
+        let nonce = U256::from_dec_str("103030303").unwrap();
+        let balance = U256::from_dec_str("3838209").unwrap();
+        let storage_key_0 = [4u8; 32];
+        let storage_key_1 = [5u8; 32];
+        let storage_value_0 = [6u8; 32];
+        let storage_value_1 = [7u8; 32];
+
+        contract.set_code(&addr_0, &code);
+        assert_eq!(contract.code_at(&addr_0), Some(code.to_vec()));
+        assert_eq!(contract.code_at(&addr_1), None);
+        assert_eq!(contract.code_at(&addr_2), None);
+
+        contract.set_nonce(&addr_0, nonce);
+        assert_eq!(contract.nonce_of(&addr_0), nonce);
+        assert_eq!(contract.nonce_of(&addr_1), zero);
+        assert_eq!(contract.nonce_of(&addr_2), zero);
+
+        contract.set_balance(&addr_0, balance);
+        assert_eq!(contract.balance_of(&addr_0), balance);
+        assert_eq!(contract.balance_of(&addr_1), zero);
+        assert_eq!(contract.balance_of(&addr_2), zero);
+
+        contract.set_contract_storage(&addr_0, storage_key_0, storage_value_0);
+        assert_eq!(contract.read_contract_storage(&addr_0, storage_key_0), Some(storage_value_0));
+        assert_eq!(contract.read_contract_storage(&addr_1, storage_key_0), None);
+        assert_eq!(contract.read_contract_storage(&addr_2, storage_key_0), None);
+
+        let next = {
+            // Open a new store
+            let mut next = StateStore::default();
+            let mut sub1 = SubState::new(&addr_0, &mut next, contract);
+
+            sub1.set_code(&addr_1, &code);
+            assert_eq!(sub1.code_at(&addr_0), Some(code.to_vec()));
+            assert_eq!(sub1.code_at(&addr_1), Some(code.to_vec()));
+            assert_eq!(sub1.code_at(&addr_2), None);
+
+            sub1.set_nonce(&addr_1, nonce);
+            assert_eq!(sub1.nonce_of(&addr_0), nonce);
+            assert_eq!(sub1.nonce_of(&addr_1), nonce);
+            assert_eq!(sub1.nonce_of(&addr_2), zero);
+
+            sub1.set_balance(&addr_1, balance);
+            assert_eq!(sub1.balance_of(&addr_0), balance);
+            assert_eq!(sub1.balance_of(&addr_1), balance);
+            assert_eq!(sub1.balance_of(&addr_2), zero);
+
+            sub1.set_contract_storage(&addr_1, storage_key_0, storage_value_0);
+            assert_eq!(sub1.read_contract_storage(&addr_0, storage_key_0), Some(storage_value_0));
+            assert_eq!(sub1.read_contract_storage(&addr_1, storage_key_0), Some(storage_value_0));
+            assert_eq!(sub1.read_contract_storage(&addr_2, storage_key_0), None);
+
+            sub1.set_contract_storage(&addr_1, storage_key_0, storage_value_1);
+            assert_eq!(sub1.read_contract_storage(&addr_0, storage_key_0), Some(storage_value_0));
+            assert_eq!(sub1.read_contract_storage(&addr_1, storage_key_0), Some(storage_value_1));
+            assert_eq!(sub1.read_contract_storage(&addr_2, storage_key_0), None);
+
+            sub1.set_contract_storage(&addr_1, storage_key_1, storage_value_1);
+            assert_eq!(sub1.read_contract_storage(&addr_1, storage_key_0), Some(storage_value_1));
+            assert_eq!(sub1.read_contract_storage(&addr_1, storage_key_1), Some(storage_value_1));
+
+            sub1.set_contract_storage(&addr_1, storage_key_0, storage_value_0);
+            assert_eq!(sub1.read_contract_storage(&addr_1, storage_key_0), Some(storage_value_0));
+            assert_eq!(sub1.read_contract_storage(&addr_1, storage_key_1), Some(storage_value_1));
+
+            next
+        };
+
+        contract.commit_changes(&next);
+        assert_eq!(contract.code_at(&addr_0), Some(code.to_vec()));
+        assert_eq!(contract.code_at(&addr_1), Some(code.to_vec()));
+        assert_eq!(contract.code_at(&addr_2), None);
+        assert_eq!(contract.nonce_of(&addr_0), nonce);
+        assert_eq!(contract.nonce_of(&addr_1), nonce);
+        assert_eq!(contract.nonce_of(&addr_2), zero);
+        assert_eq!(contract.balance_of(&addr_0), balance);
+        assert_eq!(contract.balance_of(&addr_1), balance);
+        assert_eq!(contract.balance_of(&addr_2), zero);
+        assert_eq!(contract.read_contract_storage(&addr_0, storage_key_0), Some(storage_value_0));
+        assert_eq!(contract.read_contract_storage(&addr_1, storage_key_0), Some(storage_value_0));
+        assert_eq!(contract.read_contract_storage(&addr_1, storage_key_1), Some(storage_value_1));
+        assert_eq!(contract.read_contract_storage(&addr_2, storage_key_0), None);
     })
 }

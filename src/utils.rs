@@ -99,7 +99,7 @@ pub fn evm_contract_address(
     }
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Eq, PartialEq, Debug, Ord, PartialOrd)]
 pub struct Balance(pub u128);
 
 impl Balance {

@@ -5,7 +5,10 @@ cache:
     directories:
         - ./target
         - /home/travis/.cargo
+before_install:
+  - rustup target add wasm32-unknown-unknown --toolchain stable
 install:
-  - rustup target add wasm32-unknown-unknown
+  - cargo +stable build --target wasm32-unknown-unknown --release # ./build.sh needs target/wasm32-unknown-unknown/release/near_evm.wasm
 script:
+  - ./build.sh
   - cargo test --lib

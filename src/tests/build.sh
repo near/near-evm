@@ -6,18 +6,20 @@ cat build/contracts/SolTests.json | \
   jq .bytecode | \
   awk '{ print substr($1,4,length($1)-4) }' | \
   tr -d '\n' \
-  > build/soltest.bin
+  > build/SolTests.bin
 
 cat build/contracts/SolTests.json | \
   jq .abi \
-  > build/soltest.abi
+  > build/SolTest.abi
 
 cat build/contracts/SubContract.json | \
   jq .bytecode | \
   awk '{ print substr($1,4,length($1)-4) }' | \
   tr -d '\n' \
-  > build/subcontract.bin
+  > build/SubContract.bin
 
 cat build/contracts/SubContract.json | \
   jq .abi \
-  > build/subcontract.abi
+  > build/SubContract.abi
+
+rm -rf build/contracts

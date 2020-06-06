@@ -1,15 +1,19 @@
-language: node_js
-cache: cargo
-node_js:
-  - 12.0
-install:
-  - curl https://sh.rustup.rs -sSf | sh -s -- -y
-  - export PATH="$HOME/.cargo/bin:$PATH"
-  - rustup target add wasm32-unknown-unknown
-  - rustup default nightly
-  - npm i -g truffle
-before_script:
-  - cargo build --target wasm32-unknown-unknown --release # ./build.sh needs target/wasm32-unknown-unknown/release/near_evm.wasm
-  - cd src/tests && ./build.sh && cd ../.. && ./build.sh
-script:
-  - cargo test --lib
+matrix:
+    include:
+      - language: rust
+        rust: stable
+        cache:
+            directories:
+                - ./target
+                - /home/travis/.cargo
+        script:
+          - cargo test --lib
+
+      - language: rust
+        rust: stable
+        before_install:
+          - rustup target add wasm32-unknown-unknown --toolchain stable
+        install:
+          - cargo +stable build --target wasm32-unknown-unknown --release # ./build.sh needs target/wasm32-unknown-unknown/release/near_evm.wasm
+        script:
+          - ./build.sh

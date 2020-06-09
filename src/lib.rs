@@ -204,48 +204,6 @@ impl EvmContract {
         }
     }
 
-    /// Make an EVM transaction. Calls `contract_address` with `encoded_input`. Execution
-    /// continues until all EVM messages have been processed. We expect this to behave identically
-    /// to an Ethereum transaction, however there may be some edge cases.
-    ///
-    /// This function serves the eth_call functionality, and will NOT apply state changes.
-    ///
-    /// # Arguments
-    ///
-    /// * `contract_address` - the hex-encoded account address to call.
-    /// * `encoded_input` - the hex-encoded data field of the Ethereum transaction. This typically
-    /// contains the abi-encoded contract call arguments.
-    /// * `sender` - the hex-encoded sender of the view call. Used to pre-flight txns as if they
-    /// were from the specified account.
-    /// * `value` - the number of yoctoNEAR to simulate the call with. Sets msg.balance, but will
-    /// NOT actually be transferred.
-    ///
-    /// # Panics
-    ///
-    /// * When `contract_address` or `encoded_input` or `sender` is not valid hex.
-    pub fn view_call_contract(
-        &mut self,
-        contract_address: String,
-        encoded_input: String,
-        sender: String,
-        value: Balance,
-    ) -> String {
-        let sender = utils::near_account_id_to_evm_address(&sender);
-        let contract_address = utils::hex_to_evm_address(&contract_address);
-        let val = match value {
-            Balance(0) => None,
-            Balance(v) => Some(U256::from(v)),
-        };
-
-        let result =
-            self.call_contract_internal(val, &contract_address, encoded_input, &sender, false);
-
-        match result {
-            Ok(v) => hex::encode(v),
-            Err(s) => format!("internal call failed: {}", s),
-        }
-    }
-
     /// Move internal EVM balance to the EVM account corresponding to a specific Near account.
     /// This generally functions as an ethereum transfer, but will NOT trigger fallback functions.
     ///
@@ -395,6 +353,75 @@ impl EvmContract {
         utils::u256_to_balance(&self.nonce_of(&addr))
     }
 }
+
+/// view_call_contract cannot implement #[near_bindgen_macro] because it is treated as a transaction call
+/// and will result in: "View Functions Error: attached_deposit prohibited"
+impl EvmContract {
+    /// Make an EVM transaction. Calls `contract_address` with `encoded_input`. Execution
+    /// continues until all EVM messages have been processed. We expect this to behave identically
+    /// to an Ethereum transaction, however there may be some edge cases.
+    ///
+    /// This function serves the eth_call functionality, and will NOT apply state changes.
+    ///
+    /// # Arguments
+    ///
+    /// * `contract_address` - the hex-encoded account address to call.
+    /// * `encoded_input` - the hex-encoded data field of the Ethereum transaction. This typically
+    /// contains the abi-encoded contract call arguments.
+    /// * `sender` - the hex-encoded sender of the view call. Used to pre-flight txns as if they
+    /// were from the specified account.
+    /// * `value` - the number of yoctoNEAR to simulate the call with. Sets msg.balance, but will
+    /// NOT actually be transferred.
+    ///
+    /// # Panics
+    ///
+    /// * When `contract_address` or `encoded_input` or `sender` is not valid hex.
+    pub fn view_call_contract(
+        &mut self,
+        contract_address: String,
+        encoded_input: String,
+        sender: String,
+        value: Balance,
+    ) -> String {
+        let sender = utils::near_account_id_to_evm_address(&sender);
+        let contract_address = utils::hex_to_evm_address(&contract_address);
+        let val = match value {
+            Balance(0) => None,
+            Balance(v) => Some(U256::from(v)),
+        };
+
+        let result =
+            self.call_contract_internal(val, &contract_address, encoded_input, &sender, false);
+
+        match result {
+            Ok(v) => hex::encode(v),
+            Err(s) => format!("internal call failed: {}", s),
+        }
+    }
+}
+/// implement #[near_bindgen_macro] functionality for view_call_contract except for attached_deposit
+#[cfg(target_arch="wasm32")]
+#[no_mangle]
+pub extern "C" fn view_call_contract() {
+    near_sdk::env::setup_panic_hook();
+    near_sdk::env::set_blockchain_interface(Box::new(near_blockchain::NearBlockchain {}));
+
+    #[derive(serde::Deserialize, serde::Serialize)]
+    struct Input {
+        contract_address: String,
+        encoded_input: String,
+        sender: String,
+        value: Balance,
+    }
+    let Input { contract_address, encoded_input,sender, value }: Input = serde_json::from_slice(
+         &near_sdk::env::input().expect("Expected input since method has arguments.")
+    ).expect("Failed to deserialize input from JSON.");
+
+    let mut contract: EvmContract = near_sdk::env::state_read().unwrap_or_default();
+    let result = contract.view_call_contract(contract_address, encoded_input,sender, value, );
+    let result = serde_json::to_vec(&result).expect("Failed to serialize the return value using JSON.");
+    near_sdk::env::value_return(&result);
+ }
 
 impl EvmContract {
     fn commit_code(&mut self, other: &HashMap<[u8; 20], Vec<u8>>) {

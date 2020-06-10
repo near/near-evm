@@ -131,14 +131,15 @@ fn create_random_zombie(client: &RpcUser, zombies_address: &str, name: &str) {
 fn get_zombies_by_owner(client: &RpcUser, zombies_address: &str, owner: Address) -> Vec<Uint> {
     let (input, _decoder) = cryptozombies::functions::get_zombies_by_owner::call(owner);
     let input = format!(
-        "{{\"contract_address\":\"{}\",\"encoded_input\":\"{}\"}}",
+        "{{\"contract_address\":\"{}\",\"encoded_input\":\"{}\",\"sender\":\"{}\", \"value\":\"0\"}}",
         zombies_address,
-        hex::encode(input)
+        hex::encode(input),
+        owner
     );
     let tx_result = client.function_call(
         SIGNER_NAME.to_owned(),
         CONTRACT_NAME.to_owned(),
-        "call_contract",
+        "view_call_contract",
         input.into_bytes(),
         LOTS_OF_GAS,
         0,
@@ -147,7 +148,7 @@ fn get_zombies_by_owner(client: &RpcUser, zombies_address: &str, owner: Address)
         let bytes = from_base64(base64).unwrap();
         let bytes = hex::decode(&bytes[1..bytes.len() - 1]).unwrap();
         let res = cryptozombies::functions::get_zombies_by_owner::decode_output(&bytes).unwrap();
-        println!("call_contract(getZombiesByOwner): {:?}\n", res);
+        println!("view_call_contract(getZombiesByOwner): {:?}\n", res);
         res
     } else {
         panic!(tx_result)

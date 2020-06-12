@@ -25,6 +25,18 @@ pub struct NearExt<'a> {
     pub depth: usize,
 }
 
+impl std::fmt::Debug for NearExt<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\nNearExt {{")?;
+        write!(f, "\n\tinfo: {:?}", self.info)?;
+        write!(f, "\n\torigin: {:?}", self.origin)?;
+        write!(f, "\n\tcontext_addr: {:?}", self.context_addr)?;
+        write!(f, "\n\tstatic_flag: {:?}", self.static_flag)?;
+        write!(f, "\n\tdepth: {:?}", self.depth)?;
+        write!(f, "\n}}")
+    }
+}
+
 impl<'a> NearExt<'a> {
     pub fn new(
         context_addr: Address,

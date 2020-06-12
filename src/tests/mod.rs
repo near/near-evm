@@ -196,8 +196,8 @@ fn test_accurate_storage_on_selfdestruct() {
         assert_eq!(contract.balance_of_evm_address(destruct_addr.clone()), utils::Balance(10));
 
         // Destroy contract and confirm 0 balance
-        input = selfdestruct::functions::destruction::call().0;
-        contract.call_contract(destruct_addr.clone(), hex::encode(input));
+        // input = selfdestruct::functions::destruction::call().0;
+        // contract.call_contract(destruct_addr.clone(), hex::encode(input));
         assert_eq!(contract.balance_of_evm_address(destruct_addr.clone()), utils::Balance(0));
         assert_eq!(contract.get_code(destruct_addr.clone()).len(), 0);
 
@@ -218,6 +218,23 @@ fn test_accurate_storage_on_selfdestruct() {
         input = selfdestruct::functions::stored_address::call().0;
         raw = contract.call_contract(destruct_addr.clone(), hex::encode(input));
         assert_eq!(0, raw.parse::<i32>().unwrap());
+    })
+}
+
+#[test]
+fn test_solidity_accurate_storage_on_selfdestruct() {
+    test_utils::run_test(100, |contract|  {
+
+        let salt = H256([0u8; 32]);
+        let destruct_code = hex::decode(DESTRUCT_TEST.to_string()).expect("invalid hex");
+
+        // Deploy CREATE2 Factory
+        let factory_addr = contract.deploy_code(FACTORY_TEST.to_string());
+
+        // Deploy SelfDestruct contract using CREATE2 and confirm code at address
+        let mut input = create2factory::functions::double_deploy_test::call(salt, destruct_code.clone()).0;
+        let mut raw = contract.call_contract(factory_addr.clone(), hex::encode(input));
+        println!("raw: {}", raw)
     })
 }
 

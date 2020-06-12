@@ -51,14 +51,31 @@ contract SubContract is ExposesBalance {
     function aFunction() public pure returns (bool) {
         return true;
     }
+
+    function () external payable {}
 }
 
 contract Create2Factory {
-    function deploy(bytes32 _salt, bytes memory _contractBytecode) public returns (address addr) {
+    function deploy(bytes32 _salt, bytes memory _contractBytecode) public returns (address payable addr) {
         assembly {
             addr := create2(0, add(_contractBytecode, 0x20), mload(_contractBytecode), _salt)
         }
     }
+
+    function doubleDeployTest(bytes32 _salt, bytes memory _contractBytecode) public returns (uint) {
+        SelfDestruct other = SelfDestruct(deploy(_salt, _contractBytecode));
+        other.storeUint(5);
+        require(other.storedUint() == 7, "pre-destruction wrong uint");
+
+        /* other.destruction(msg.sender); */
+        /* require(address(other).balance == 0); */
+
+        /* deploy(_salt, _contractBytecode); */
+        /* require(other.storedUint() == 500, "post-redeploy wrong uint"); */
+        return other.storedUint();
+    }
+
+    function () external payable {}
 }
 
 contract SelfDestruct {
@@ -75,7 +92,7 @@ contract SelfDestruct {
         storedUint = _number;
     }
 
-    function destruction() public returns (bool) {
-        selfdestruct(msg.sender);
+    function destruction(address payable addr) public returns (bool) {
+        selfdestruct(addr);
     }
 }

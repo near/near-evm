@@ -1,11 +1,5 @@
 [
   {
-    "inputs": [],
-    "payable": true,
-    "stateMutability": "payable",
-    "type": "constructor"
-  },
-  {
     "payable": true,
     "stateMutability": "payable",
     "type": "fallback"
@@ -66,7 +60,13 @@
   },
   {
     "constant": false,
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "address payable",
+        "name": "addr",
+        "type": "address"
+      }
+    ],
     "name": "destruction",
     "outputs": [
       {

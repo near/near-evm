@@ -186,6 +186,7 @@ impl EvmContract {
     /// * When `contract_address` or `encoded_input` is not valid hex.
     #[payable]
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
+        println!("call_contract {}", encoded_input);
         let contract_address = utils::hex_to_evm_address(&contract_address);
         let sender = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
@@ -195,6 +196,8 @@ impl EvmContract {
         }
         let result =
             self.call_contract_internal(value, &contract_address, encoded_input, &sender, true);
+
+        println!("result {:?}", result);
 
         match result {
             Ok(v) => hex::encode(v),
@@ -495,6 +498,8 @@ impl EvmContract {
             &input,
             should_commit,
         );
+
+        println!("result: {:?}", result);
 
         result.map(|v| v.to_vec())
     }

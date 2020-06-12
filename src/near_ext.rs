@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use ethereum_types::{Address, H256, U256};
@@ -127,6 +126,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         // discarded argument here is the codehash.
         // CONSIDER: storing codehash instead of calculating
         let (addr, _) = utils::evm_contract_address(address_type, &self.context_addr, &nonce, code);
+        self.sub_state.state.recreate(addr.0);
 
         interpreter::deploy_code(
             self.sub_state,
@@ -270,17 +270,12 @@ impl<'a> vm::Ext for NearExt<'a> {
     /// Address to which funds should be refunded.
     /// Deletes code, moves balance
     fn suicide(&mut self, refund_address: &Address) -> EvmResult<()> {
-        // if we call `remove` on this, it won't be committed later
-        // so instead we replace it with an empty vector
         self.sub_state
             .state
-            .code
-            .insert(self.context_addr.0, vec![]);
+            .self_destructs
+            .insert(self.context_addr.0);
+
         let balance = self.sub_state.balance_of(&self.context_addr);
-        self.sub_state
-            .state
-            .storages
-            .insert(self.context_addr.0, HashMap::default());
         self.sub_state.add_balance(refund_address, balance);
         self.sub_state.sub_balance(&self.context_addr, balance);
         Ok(())

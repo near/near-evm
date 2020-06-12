@@ -51,8 +51,6 @@ contract SubContract is ExposesBalance {
     function aFunction() public pure returns (bool) {
         return true;
     }
-
-    function () external payable {}
 }
 
 contract Create2Factory {

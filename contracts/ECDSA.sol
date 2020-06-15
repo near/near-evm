@@ -24,6 +24,7 @@ contract NearECDSA {
     }
 
     function recover(bytes32 _hash, bytes memory signature) external view returns (address) {
+        address signer = recoverRaw(_hash, signature);
         address _account = accounts[signer];
         return _account == address(0) ? signer : _account;
     }

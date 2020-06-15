@@ -1,12 +1,6 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_aNumber",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [],
     "payable": true,
     "stateMutability": "payable",
     "type": "constructor"
@@ -19,12 +13,12 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "aNumber",
+    "name": "storedAddress",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "payable": false,
@@ -34,7 +28,7 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "balance",
+    "name": "storedUint",
     "outputs": [
       {
         "internalType": "uint256",
@@ -48,34 +42,32 @@
   },
   {
     "constant": false,
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_recipient",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "transferTo",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [],
+    "name": "storeAddress",
+    "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "constant": true,
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_number",
+        "type": "uint256"
+      }
+    ],
+    "name": "storeUint",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
     "inputs": [],
-    "name": "aFunction",
+    "name": "destruction",
     "outputs": [
       {
         "internalType": "bool",
@@ -84,7 +76,7 @@
       }
     ],
     "payable": false,
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

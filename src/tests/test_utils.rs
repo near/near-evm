@@ -35,3 +35,7 @@ where
     let mut contract = EvmContract::default();
     test(&mut contract)
 }
+
+pub fn reset_context() {
+    testing_env!(get_context(vec![]));
+}

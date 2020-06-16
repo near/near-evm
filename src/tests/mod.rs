@@ -9,11 +9,13 @@ use_contract!(soltest, "src/tests/build/SolTests.abi");
 use_contract!(subcontract, "src/tests/build/SubContract.abi");
 use_contract!(create2factory, "src/tests/build/Create2Factory.abi");
 use_contract!(selfdestruct, "src/tests/build/SelfDestruct.abi");
+use_contract!(testprecompiles, "src/tests/build/TestPrecompiles.abi");
 
 lazy_static_include_str!(TEST, "src/tests/build/SolTests.bin");
 lazy_static_include_str!(FACTORY_TEST, "src/tests/build/Create2Factory.bin");
 lazy_static_include_str!(DESTRUCT_TEST, "src/tests/build/SelfDestruct.bin");
 lazy_static_include_str!(CONSTRUCTOR_TEST, "src/tests/build/ConstructorRevert.bin");
+lazy_static_include_str!(TEST_PRECOMPILES, "src/tests/build/TestPrecompiles.bin");
 
 #[test]
 fn test_sends() {
@@ -67,6 +69,17 @@ fn test_failed_deploy_returns_error() {
     let mut contract = test_utils::initialize();
     contract.deploy_code(CONSTRUCTOR_TEST.to_string());
 
+}
+
+#[test]
+fn test_precompile_sha2() {
+    test_utils::run_test(0, |contract| {
+        let addr = contract.deploy_code(TEST_PRECOMPILES.to_string());
+
+        let (input, _) = testprecompiles::functions::test_sha::call();
+        let raw = contract.call_contract(addr.clone(), hex::encode(input));
+        println!("raw: {}", raw)
+    })
 }
 
 #[test]

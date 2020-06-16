@@ -189,6 +189,8 @@ impl EvmContract {
         let contract_address = utils::hex_to_evm_address(&contract_address);
         let sender = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
+        let code = self.get_code("0000000000000000000000000000000000000002".to_string());
+        println!("code: {}", code);
         let value = utils::attached_deposit_as_u256_opt();
         if let Some(val) = value {
             self.add_balance(&utils::predecessor_as_evm(), val);

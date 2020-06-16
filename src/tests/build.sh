@@ -8,6 +8,7 @@ contracts=(
     "Create2Factory"
     "SelfDestruct"
     "ConstructorRevert"
+    "TestPrecompiles"
 )
 
 for contractName in "${contracts[@]}"

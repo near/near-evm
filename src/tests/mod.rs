@@ -76,7 +76,7 @@ fn test_precompile_sha2() {
     test_utils::run_test(0, |contract| {
         let addr = contract.deploy_code(TEST_PRECOMPILES.to_string());
 
-        let (input, _) = testprecompiles::functions::test_sha::call();
+        let (input, _) = testprecompiles::functions::test_sha2::call();
         let raw = contract.call_contract(addr.clone(), hex::encode(input));
         println!("raw: {}", raw)
     })

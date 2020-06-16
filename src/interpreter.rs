@@ -49,6 +49,12 @@ pub fn deploy_code<T: EvmState>(
     if apply {
         state.commit_changes(&state_updates.unwrap());
         state.set_code(address, &return_data.to_vec());
+    } else {
+        // TODO: consider whether this should panic.
+        panic!(
+            format!("Contract failed to deploy, with message: [{}].",
+            hex::encode(&return_data.to_vec()))
+        )
     }
 }
 

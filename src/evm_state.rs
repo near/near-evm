@@ -86,7 +86,7 @@ pub trait EvmState {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct StateStore {
     pub code: HashMap<[u8; 20], Vec<u8>>,
     pub balances: HashMap<[u8; 20], [u8; 32]>,

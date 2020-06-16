@@ -13,6 +13,7 @@ use_contract!(selfdestruct, "src/tests/build/SelfDestruct.abi");
 lazy_static_include_str!(TEST, "src/tests/build/SolTests.bin");
 lazy_static_include_str!(FACTORY_TEST, "src/tests/build/Create2Factory.bin");
 lazy_static_include_str!(DESTRUCT_TEST, "src/tests/build/SelfDestruct.bin");
+lazy_static_include_str!(CONSTRUCTOR_TEST, "src/tests/build/ConstructorRevert.bin");
 
 #[test]
 fn test_sends() {
@@ -54,6 +55,14 @@ fn test_deploy_with_nonce() {
         contract.deploy_code(TEST.to_string()); // at a different address
         assert_eq!(contract.nonce_of_near_account("owner1".to_string()).0, 2);
         assert_eq!(contract.nonce_of_evm_address(evm_acc.clone()).0, 2);
+    })
+}
+
+#[test]
+#[should_panic]
+fn test_failed_deploy_returns_error() {
+    test_utils::run_test(0, |contract| {
+        contract.deploy_code(CONSTRUCTOR_TEST.to_string());
     })
 }
 

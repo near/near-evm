@@ -51,20 +51,31 @@ near deploy --accountId=evm --wasmFile=res/near_evm.wasm
 
 1. Build the evm contract
     1. Ensure truffle is installed
-      - `npm i -g truffle`
+      ```sh
+      npm i -g truffle
+      ```
     1. Build the test contracts
-      `cd src/tests && ./build.sh`
-    1. build the Near EVM contract binary
-      - `cd ../.. && ./build.sh`
-1. Run the all tests including integration test
-    1. `cargo test --lib`
-1. To run the RPC tests:
-    1. Run a local NEAR node
-      1. check out `nearcore` from github
-      1. compile and run `nearcore`
-        - `cd nearcore && python scripts/start_unittest.py --local --release`
+      ```sh
+      cd src/tests && ./build.sh
+      ```
+    2. Build the Near EVM contract binary
+      ```sh
+      cd ../.. && ./build.sh`
+      ```
+2. Run the all tests including integration test
+      ```sh
+      cargo test --lib`
+      ```
+3. To run the RPC tests you must [run a local NEAR node](https://docs.near.org/docs/local-setup/local-dev-node):
+      1. Check out [`nearcore`](https://github.com/nearprotocol/nearcore) from Github
+      2. Compile and run `nearcore`
+      ```sh
+      cd nearcore && python scripts/start_unittest.py --local --release
+      ```
     1. Run the tests from this directory in another terminal window:
-      - `cargo test`
+      ```sh
+      cargo test
+      ```
 
 #### Troubleshooting
 
@@ -75,5 +86,7 @@ error[E0554]: `#![feature]` may not be used on the stable release channel
 ```
 
 1. Install `nightly`
-   1. `rustup toolchain install nightly`
+  ```sh
+  rustup toolchain install nightly`
+  ```
 2. Run the [Testing](###Testing) commands again

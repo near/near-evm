@@ -7,7 +7,9 @@ pragma solidity ^0.6.0;
  * These functions can be used to verify that a message was signed by the holder
  * of ECDSA keys corresponding to a certain account.
  *
- * Accounts may register
+ * Accounts may register a public key by proving ownership of that key (via a
+ * signed message). When recovering the signer of a message, we check whether
+ * it has a registered owner.
  */
 contract NearECDSA {
 
@@ -15,6 +17,18 @@ contract NearECDSA {
 
     mapping (address => address) public accounts;
 
+    /*
+     * @dev Register a signing key for some near account. This allows contracts
+     * to verify an ECDSA signature as if it were from that near account.
+     *
+     * To prevent abuse, we require that the caller provide a signed
+     * attestation that it owns the private key.
+     *
+     * Note that this can be used to delegate signer access for a contract
+     * account. However, that access cannot cause state changes to the account.
+     * Rather, it allows an off-chain actor to auth that account to other
+     * smart contracts in certain occasions.
+     */
     function registerSigner(address signer, bytes memory signature) external {
         // We require that they prove key ownership
         // The digest that ought to be signed is
@@ -27,22 +41,39 @@ contract NearECDSA {
         accounts[signer] = msg.sender;
     }
 
+    /*
+     * @dev Unregister a previously registered signing key.
+     */
     function unregisterSigner(address signer) external {
         if (accounts[signer] = msg.sender) accounts[signer] = address(0);
     }
 
-    function recover(bytes32 _hash, bytes memory signature) external view returns (address) {
-        address signer = recoverRaw(_hash, signature);
+    /*
+     * @dev Recover the account corresponding to an ECDSA signature on some
+     * message. If that key is registered as a representative of some other
+     * account, return that account address instead. This should be used by
+     * most ECDSA contracts.
+     *
+     * Note that this function is NOT SUFFICIENT to verify a signature on its
+     * own. The caller must also perform the hash required to generate the
+     * `hash` parameter.
+     */
+    function recover(bytes32 hash, bytes memory signature) external view returns (address) {
+        address signer = ECDSA.recover(hash, signature);
         address _account = accounts[signer];
         return _account == address(0) ? signer : _account;
     }
 
+    /*
+     * @dev Recover the signer of some ECDSA key. Do not lookup a registered
+     * address.
+     *
+     * Note that this function is NOT SUFFICIENT to verify a signature on its
+     * own. The caller must also perform the hash required to generate the
+     * `hash` parameter.
+     */
     function recoverRaw(bytes32 hash, bytes memory signature) public pure returns (address) {
         return ECDSA.recover(hash, signature);
-    }
-
-    function toEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32) {
-        return ECDSA.toEthSignedMessageHash(hash);
     }
 }
 

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use std::sync::Arc;
 
 use ethereum_types::{Address, U256};
@@ -98,6 +100,7 @@ pub fn _create<T: EvmState>(
 
     (result.ok().unwrap().ok(), Some(store))
 }
+
 
 pub fn call<T: EvmState>(
     state: &mut T,

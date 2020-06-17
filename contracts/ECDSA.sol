@@ -15,7 +15,15 @@ contract NearECDSA {
 
     mapping (address => address) public accounts;
 
-    function registerSigner(address signer) external {
+    function registerSigner(address signer, bytes memory signature) external {
+        // We require that they prove key ownership
+        // The digest that ought to be signed is
+        // keccak256("NearECDSA" | 20-byte truncated public key hash | 20-byte near evm account)
+        bytes32 digest = keccak256(abi.encodePacked("NearECDSA"), signer, msg.sender);
+        require(
+            signer == recoverRaw(digest, signature),
+            "NearECDSA/registerSigner -- Delegated key must sign near account."
+        );
         accounts[signer] = msg.sender;
     }
 

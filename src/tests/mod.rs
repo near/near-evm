@@ -21,14 +21,18 @@ fn test_sends() {
     let evm_acc = hex::encode(utils::near_account_id_to_evm_address("evmGuy").0);
 
     assert_eq!(contract.balance_of_near_account("owner1".to_string()).0, 0);
-    test_utils::attach_deposit(100);
-    contract.add_near();
+
+
+    test_utils::tx_with_deposit(100, || {
+        contract.add_near()
+    });
     assert_eq!(
         contract.balance_of_near_account("owner1".to_string()).0,
         100
     );
 
     contract.move_funds_to_evm_address(evm_acc.clone(), utils::Balance(50));
+
     assert_eq!(contract.balance_of_near_account("owner1".to_string()).0, 50);
     assert_eq!(contract.balance_of_evm_address(evm_acc).0, 50);
 
@@ -88,14 +92,17 @@ fn test_internal_create() {
 #[test]
 fn test_deploy_and_transfer() {
     let mut contract = test_utils::initialize();
-    test_utils::attach_deposit(100);
-    let test_addr = contract.deploy_code(TEST.to_string());
+    let test_addr = test_utils::tx_with_deposit(100, || {
+        contract.deploy_code(TEST.to_string())
+    });
     assert_eq!(contract.balance_of_evm_address(test_addr.clone()).0, 100);
 
     // This should increment the nonce of the deploying contract
     // There is 100 attached to this that should be passed through
     let (input, _) = soltest::functions::deploy_new_guy::call(8);
-    let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
+    let raw = test_utils::tx_with_deposit(100, || {
+        contract.call_contract(test_addr.clone(), hex::encode(input.clone()))
+    });
 
     // The sub_addr should have been transferred 100 monies
     let sub_addr = raw[24..64].to_string();
@@ -106,17 +113,20 @@ fn test_deploy_and_transfer() {
 #[test]
 fn test_deploy_with_value() {
     let mut contract = test_utils::initialize();
-    test_utils::attach_deposit(100);
 
     // This test is identical to the previous one
     // As we expect behavior to be the same.
-    let test_addr = contract.deploy_code(TEST.to_string());
+    let test_addr = test_utils::tx_with_deposit(100, || {
+        contract.deploy_code(TEST.to_string())
+    });
     assert_eq!(contract.balance_of_evm_address(test_addr.clone()).0, 100);
 
     // This should increment the nonce of the deploying contract
     // There is 100 attached to this that should be passed through
     let (input, _) = soltest::functions::pay_new_guy::call(8);
-    let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
+    let raw = test_utils::tx_with_deposit(100, || {
+        contract.call_contract(test_addr.clone(), hex::encode(input.clone()))
+    });
 
     // The sub_addr should have been transferred 100 monies
     let sub_addr = raw[24..64].to_string();
@@ -127,15 +137,18 @@ fn test_deploy_with_value() {
 #[test]
 fn test_contract_to_eoa_transfer() {
     let mut contract = test_utils::initialize();
-    test_utils::attach_deposit(100);
 
     // This test is identical to the previous one
     // As we expect behavior to be the same.
-    let test_addr = contract.deploy_code(TEST.to_string());
+    let test_addr = test_utils::tx_with_deposit(100, || {
+        contract.deploy_code(TEST.to_string())
+    });
     assert_eq!(contract.balance_of_evm_address(test_addr.clone()).0, 100);
 
     let (input, _) = soltest::functions::return_some_funds::call();
-    let raw = contract.call_contract(test_addr.clone(), hex::encode(input));
+    let raw = test_utils::tx_with_deposit(100, || {
+        contract.call_contract(test_addr.clone(), hex::encode(input.clone()))
+    });
 
     let sender_addr = raw[24..64].to_string();
     assert_eq!(contract.balance_of_evm_address(test_addr).0, 150);
@@ -175,9 +188,9 @@ fn test_view_call() {
 #[test]
 fn test_accurate_storage_on_selfdestruct() {
     let mut contract = test_utils::initialize();
-    test_utils::attach_deposit(100);
-    contract.add_near();
-    test_utils::set_default_context(); // clear attached deposit
+    test_utils::tx_with_deposit(100, || {
+        contract.add_near()
+    });
 
     let salt = H256([0u8; 32]);
     let destruct_code = hex::decode(DESTRUCT_TEST.to_string()).expect("invalid hex");

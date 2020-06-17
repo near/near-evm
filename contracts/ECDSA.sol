@@ -29,7 +29,7 @@ contract NearECDSA {
         return _account == address(0) ? signer : _account;
     }
 
-    function recoverRaw(bytes32 hash, bytes memory signature) private pure returns (address) {
+    function recoverRaw(bytes32 hash, bytes memory signature) public pure returns (address) {
         return ECDSA.recover(hash, signature);
     }
 

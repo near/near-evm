@@ -45,8 +45,6 @@ near create_account evm --masterAccount=<account you used in near login/test.nea
 near deploy --accountId=evm --wasmFile=res/near_evm.wasm
 ```
 
-* TODO: hackery to actually deploy your EVM contract
-
 ### Testing
 
 1. Build the evm contract

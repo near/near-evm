@@ -24,18 +24,18 @@ fn get_context(input: Vec<u8>) -> VMContext {
     }
 }
 
-pub fn run_test<T>(attached_deposit: u128, test: T) -> ()
-where
-    T: FnOnce(&mut EvmContract) -> (),
-{
-    let mut context = get_context(vec![]);
-    context.attached_deposit = attached_deposit;
-    context.account_balance = attached_deposit;
-    testing_env!(context);
-    let mut contract = EvmContract::default();
-    test(&mut contract)
+pub fn initialize() -> EvmContract {
+    set_default_context();
+    return EvmContract::default();
 }
 
-pub fn reset_context() {
-    testing_env!(get_context(vec![]));
+pub fn set_default_context() {
+    let context = get_context(vec![]);
+    testing_env!(context);
+}
+
+pub fn attach_deposit(attached_deposit: u128) {
+    let mut context = get_context(vec![]);
+    context.attached_deposit = attached_deposit;
+    testing_env!(context);
 }

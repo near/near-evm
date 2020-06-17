@@ -28,35 +28,34 @@ fn get_zombies_by_owner(contract: &mut EvmContract, addr: &String, owner: Addres
 #[test]
 // CryptoZombies
 fn test_create_random_zombie() {
-    test_utils::run_test(0, |mut contract| {
-        let addr = deploy_cryptozombies(&mut contract);
-        assert_eq!(
-            get_zombies_by_owner(
-                &mut contract,
-                &addr,
-                utils::near_account_id_to_evm_address(&"owner1".to_string())
-            ),
-            []
-        );
+    let mut contract = test_utils::initialize();
+    let addr = deploy_cryptozombies(&mut contract);
+    assert_eq!(
+        get_zombies_by_owner(
+            &mut contract,
+            &addr,
+            utils::near_account_id_to_evm_address(&"owner1".to_string())
+        ),
+        []
+    );
 
-        create_random_zombie(&mut contract, &addr, "zomb1");
-        assert_eq!(
-            get_zombies_by_owner(
-                &mut contract,
-                &addr,
-                utils::near_account_id_to_evm_address(&"owner1".to_string())
-            ),
-            [Uint::from(0)]
-        );
+    create_random_zombie(&mut contract, &addr, "zomb1");
+    assert_eq!(
+        get_zombies_by_owner(
+            &mut contract,
+            &addr,
+            utils::near_account_id_to_evm_address(&"owner1".to_string())
+        ),
+        [Uint::from(0)]
+    );
 
-        create_random_zombie(&mut contract, &addr, "zomb2");
-        assert_eq!(
-            get_zombies_by_owner(
-                &mut contract,
-                &addr,
-                utils::near_account_id_to_evm_address(&"owner1".to_string())
-            ),
-            [Uint::from(0)]
-        );
-    });
+    create_random_zombie(&mut contract, &addr, "zomb2");
+    assert_eq!(
+        get_zombies_by_owner(
+            &mut contract,
+            &addr,
+            utils::near_account_id_to_evm_address(&"owner1".to_string())
+        ),
+        [Uint::from(0)]
+    );
 }

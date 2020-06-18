@@ -7,6 +7,8 @@ matrix:
             directories:
                 - ./target
                 - /home/travis/.cargo
+        before_install:
+          - sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt-get update && sudo apt-get -f install
         install:
           - sudo add-apt-repository -y ppa:ethereum/ethereum && sudo apt-get update && sudo apt-get install -y solc
         before_script:

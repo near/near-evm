@@ -17,7 +17,7 @@ matrix:
       - language: rust
         rust: stable
         before_install:
-          - rustup target add wasm32-unknown-unknown --toolchain stable
+          - brew install solc
         install:
           - cargo +stable build --target wasm32-unknown-unknown --release # ./build.sh needs target/wasm32-unknown-unknown/release/near_evm.wasm
         script:

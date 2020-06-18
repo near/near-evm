@@ -15,7 +15,7 @@ fn get_context(input: Vec<u8>) -> VMContext {
         epoch_height: 0,
         account_balance: 0,
         account_locked_balance: 0,
-        storage_usage: 0,
+        storage_usage: 100000, // arbitrarily high number to avoid InconsistentStateError(IntegerOverflow) from resetting context params
         attached_deposit: 0,
         prepaid_gas: 2u64.pow(63),
         random_seed: vec![0, 1, 2],
@@ -24,18 +24,24 @@ fn get_context(input: Vec<u8>) -> VMContext {
     }
 }
 
-pub fn run_test<T>(attached_deposit: u128, test: T) -> ()
+pub fn initialize() -> EvmContract {
+    set_default_context();
+    return EvmContract::default();
+}
+
+pub fn set_default_context() {
+    let context = get_context(vec![]);
+    testing_env!(context);
+}
+
+pub fn tx_with_deposit<T, S>(attached_deposit: u128, mut tx: T) -> S
 where
-    T: FnOnce(&mut EvmContract) -> (),
+    T: FnMut() -> S, S: std::fmt::Debug
 {
     let mut context = get_context(vec![]);
     context.attached_deposit = attached_deposit;
-    context.account_balance = attached_deposit;
     testing_env!(context);
-    let mut contract = EvmContract::default();
-    test(&mut contract)
-}
-
-pub fn reset_context() {
-    testing_env!(get_context(vec![]));
+    let return_val = tx();
+    set_default_context();
+    return return_val;
 }

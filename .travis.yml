@@ -11,7 +11,7 @@ matrix:
           - export PATH="$HOME/.cargo/bin:$PATH"
           - npm i -g truffle
         before_script:
-          - cd ../src/tests && ./build.sh && cd ../..
+          - cd ./src/tests && ./build.sh && cd ../..
         script:
           - cargo test --lib
 

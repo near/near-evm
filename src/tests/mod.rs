@@ -1,6 +1,6 @@
-use ethabi_contract::use_contract;
-use ethereum_types::{Address, U256, H256};
 use crate::{evm_state::*, utils};
+use ethabi_contract::use_contract;
+use ethereum_types::{Address, H256, U256};
 
 mod cryptozombies;
 mod test_utils;
@@ -66,7 +66,6 @@ fn test_deploy_with_nonce() {
 fn test_failed_deploy_returns_error() {
     let mut contract = test_utils::initialize();
     contract.deploy_code(CONSTRUCTOR_TEST.to_string());
-
 }
 
 #[test]
@@ -108,6 +107,18 @@ fn test_deploy_and_transfer() {
     let sub_addr = raw[24..64].to_string();
     assert_eq!(contract.balance_of_evm_address(test_addr).0, 100);
     assert_eq!(contract.balance_of_evm_address(sub_addr).0, 100);
+}
+
+#[test]
+fn test_precompiles() {
+    let mut contract = test_utils::initialize();
+    let test_addr = test_utils::tx_with_deposit(100, || {
+        contract.deploy_code(TEST.to_string())
+    });
+
+    let (input, _) = soltest::functions::precompile_test::call();
+    let raw = contract.call_contract(test_addr.clone(), hex::encode(input.clone()));
+    assert_eq!(raw, "");
 }
 
 #[test]

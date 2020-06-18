@@ -173,6 +173,11 @@ impl<'a> vm::Ext for NearExt<'a> {
             panic!("MutableCallInStaticContext")
         }
 
+        // hijack builtins
+        if crate::builtins::is_precompile(receive_address) {
+            return Ok(crate::builtins::process_precompile(receive_address, data));
+        }
+
         let result = match call_type {
             CallType::None => {
                 // Can stay unimplemented

@@ -6,6 +6,10 @@ matrix:
             directories:
                 - ./target
                 - /home/travis/.cargo
+        install:
+          - apt-get update && apt-get install solc
+        before_script:
+          - cd ../src/tests && ./build.sh solc && cd ../..
         script:
           - cargo test --lib
 

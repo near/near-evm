@@ -1,7 +1,5 @@
 #!/bin/bash
 
-truffle compile || exit 1
-
 contracts=(
     "SolTests"
     "SubContract"
@@ -10,6 +8,7 @@ contracts=(
     "ConstructorRevert"
 )
 
+truffle compile || exit 1
 for contractName in "${contracts[@]}"
     do
         cat build/contracts/"$contractName".json | \
@@ -22,5 +21,4 @@ for contractName in "${contracts[@]}"
           jq .abi \
           > build/"$contractName".abi
     done
-
 rm -rf build/contracts

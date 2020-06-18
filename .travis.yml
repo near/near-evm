@@ -1,11 +1,17 @@
 matrix:
     include:
-      - language: rust
-        rust: stable
+      - language: node_js
+        node_js: 12.0
         cache:
             directories:
                 - ./target
                 - /home/travis/.cargo
+        install:
+          - curl https://sh.rustup.rs -sSf | sh -s -- -y
+          - export PATH="$HOME/.cargo/bin:$PATH"
+          - npm i -g truffle
+        before_script:
+          - cd ./src/tests && ./build.sh && cd ../..
         script:
           - cargo test --lib
 

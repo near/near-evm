@@ -2,12 +2,16 @@ matrix:
     include:
       - language: rust
         rust: stable
+        env:
+          global:
+            - SOLC_VERSION='v0.5.4'
+            - SOLC_URL="https://github.com/ethereum/solidity/releases/download/$SOLC_VERSION/solc-static-linux"
         cache:
             directories:
                 - ./target
                 - /home/travis/.cargo
         install:
-          - cd / && apt-get update && apt-get install solc && cd $TRAVIS_BUILD_DIR
+          - ./.travis/download_solc.sh
         before_script:
           - cd ../src/tests && ./build.sh solc && cd ../..
         script:

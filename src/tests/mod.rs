@@ -242,6 +242,25 @@ fn test_accurate_storage_on_selfdestruct() {
 }
 
 #[test]
+fn test_solidity_accurate_storage_on_selfdestruct() {
+    let mut contract = test_utils::initialize();
+    test_utils::tx_with_deposit(100, || {
+        contract.add_near()
+    });
+
+    let salt = H256([0u8; 32]);
+    let destruct_code = hex::decode(DESTRUCT_TEST.to_string()).expect("invalid hex");
+
+    // Deploy CREATE2 Factory
+    let factory_addr = contract.deploy_code(FACTORY_TEST.to_string());
+
+    // Deploy + SelfDestruct in one transaction
+    let input = create2factory::functions::test_double_deploy::call(salt, destruct_code.clone()).0;
+    let raw = contract.call_contract(factory_addr.clone(), hex::encode(input));
+    assert_eq!(1, raw.parse::<i32>().unwrap());
+}
+
+#[test]
 fn state_management() {
     let mut contract = test_utils::initialize();
     let addr_0 = Address::repeat_byte(0);

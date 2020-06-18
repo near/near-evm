@@ -54,30 +54,3 @@ contract SubContract is ExposesBalance {
 
     function () external payable {}
 }
-
-contract Create2Factory {
-    function deploy(bytes32 _salt, bytes memory _contractBytecode) public returns (address addr) {
-        assembly {
-            addr := create2(0, add(_contractBytecode, 0x20), mload(_contractBytecode), _salt)
-        }
-    }
-}
-
-contract SelfDestruct {
-    address public storedAddress;
-    uint public storedUint;
-
-    function () external payable {}
-
-    function storeAddress() public {
-        storedAddress = msg.sender;
-    }
-
-    function storeUint(uint _number) public {
-        storedUint = _number;
-    }
-
-    function destruction() public returns (bool) {
-        selfdestruct(msg.sender);
-    }
-}

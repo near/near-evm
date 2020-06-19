@@ -51,10 +51,10 @@ pub fn deploy_code<T: EvmState>(
         state.set_code(address, &return_data.to_vec());
     } else {
         // TODO: consider whether this should panic.
-        panic!(
-            format!("Contract failed to deploy, with message: [{}].",
-            hex::encode(&return_data.to_vec()))
-        )
+        panic!(format!(
+            "Contract failed to deploy, with message: [{}].",
+            hex::encode(&return_data.to_vec())
+        ))
     }
 }
 
@@ -105,6 +105,7 @@ pub fn _create<T: EvmState>(
     (result.ok().unwrap().ok(), Some(store))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn call<T: EvmState>(
     state: &mut T,
     origin: &Address,
@@ -177,6 +178,7 @@ pub fn static_call<T: EvmState>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_and_commit_if_success<T: EvmState>(
     state: &mut T,
     origin: &Address,
@@ -231,6 +233,7 @@ fn run_and_commit_if_success<T: EvmState>(
 }
 
 /// Runs the interpreter. Produces state diffs
+#[allow(clippy::too_many_arguments)]
 fn run_against_state<T: EvmState>(
     state: &mut T,
     origin: &Address,

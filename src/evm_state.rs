@@ -152,7 +152,9 @@ impl StateStore {
 impl EvmState for StateStore {
     fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
         let internal_addr = utils::evm_account_to_internal_address(*address);
-        if self.self_destructs.contains(&internal_addr) { None } else {
+        if self.self_destructs.contains(&internal_addr) {
+            None
+        } else {
             self.code.get(&internal_addr).cloned()
         }
     }
@@ -231,7 +233,9 @@ impl SubState<'_> {
 impl EvmState for SubState<'_> {
     fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
         let internal_addr = utils::evm_account_to_internal_address(*address);
-        if self.state.self_destructs.contains(&internal_addr) { None } else {
+        if self.state.self_destructs.contains(&internal_addr) {
+            None
+        } else {
             self.state
                 .code
                 .get(&internal_addr)
@@ -264,7 +268,6 @@ impl EvmState for SubState<'_> {
                 .nonces
                 .get(&address)
                 .map_or_else(|| self.parent._nonce_of(address), |k| *k)
-
         }
     }
 
@@ -500,10 +503,7 @@ mod test {
             assert_eq!(sub_1.code_at(&addr_1), None);
             assert_eq!(sub_1.nonce_of(&addr_1), zero);
             assert_eq!(sub_1.balance_of(&addr_1), balance_1);
-            assert_eq!(
-                sub_1.read_contract_storage(&addr_1, storage_key_1),
-                None
-            );
+            assert_eq!(sub_1.read_contract_storage(&addr_1, storage_key_1), None);
 
             next
         };
@@ -523,9 +523,6 @@ mod test {
             top.read_contract_storage(&addr_0, storage_key_0),
             Some(storage_value_0)
         );
-        assert_eq!(
-            top.read_contract_storage(&addr_1, storage_key_1),
-            None
-        );
+        assert_eq!(top.read_contract_storage(&addr_1, storage_key_1), None);
     }
 }

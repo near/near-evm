@@ -20,6 +20,7 @@ extern crate lazy_static_include;
 #[macro_use]
 extern crate lazy_static;
 
+mod builtins;
 mod evm_state;
 mod interpreter;
 mod near_ext;
@@ -398,7 +399,7 @@ impl EvmContract {
     }
 }
 /// implement #[near_bindgen_macro] functionality for view_call_contract except for attached_deposit
-#[cfg(target_arch="wasm32")]
+#[cfg(target_arch = "wasm32")]
 #[no_mangle]
 pub extern "C" fn view_call_contract() {
     near_sdk::env::setup_panic_hook();
@@ -411,15 +412,22 @@ pub extern "C" fn view_call_contract() {
         sender: String,
         value: Balance,
     }
-    let Input { contract_address, encoded_input,sender, value }: Input = serde_json::from_slice(
-         &near_sdk::env::input().expect("Expected input since method has arguments.")
-    ).expect("Failed to deserialize input from JSON.");
+    let Input {
+        contract_address,
+        encoded_input,
+        sender,
+        value,
+    }: Input = serde_json::from_slice(
+        &near_sdk::env::input().expect("Expected input since method has arguments."),
+    )
+    .expect("Failed to deserialize input from JSON.");
 
     let mut contract: EvmContract = near_sdk::env::state_read().unwrap_or_default();
-    let result = contract.view_call_contract(contract_address, encoded_input,sender, value, );
-    let result = serde_json::to_vec(&result).expect("Failed to serialize the return value using JSON.");
+    let result = contract.view_call_contract(contract_address, encoded_input, sender, value);
+    let result =
+        serde_json::to_vec(&result).expect("Failed to serialize the return value using JSON.");
     near_sdk::env::value_return(&result);
- }
+}
 
 impl EvmContract {
     fn commit_code(&mut self, other: &HashMap<[u8; 20], Vec<u8>>) {

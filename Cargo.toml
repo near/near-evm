@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 evm = { git = "https://github.com/paritytech/parity-ethereum", rev = "eed630a002bbebed3a3097127f2483213ff52079" }
 vm = { git = "https://github.com/paritytech/parity-ethereum", rev = "eed630a002bbebed3a3097127f2483213ff52079" }
+bn = { git = "https://github.com/paritytech/bn", default-features = false }
 parity-bytes = "0.1.0"
 ethereum-types = "0.6.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -19,6 +20,11 @@ near-sdk = "0.11.0"
 borsh = "0.6.0"
 rlp = "0.4.2"
 keccak-hash = "0.2.0"
+num-bigint = { version = "0.3", default-features = false }
+num-traits = "0.2.12"
+byteorder = "1.0"
+ripemd160 = "0.9.0"
+libsecp256k1 = "0.3.5"
 
 [dev-dependencies]
 lazy_static = "1.4"

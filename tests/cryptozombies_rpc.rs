@@ -17,10 +17,10 @@ extern crate lazy_static_include;
 #[macro_use]
 extern crate lazy_static;
 
-use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
+use_contract!(cryptozombies, "src/tests/build/ZombieAttack.abi");
 
 lazy_static_include_bytes!(EVM, "res/near_evm.wasm");
-lazy_static_include_str!(ZOMBIES, "src/tests/zombieAttack.bin");
+lazy_static_include_str!(ZOMBIES, "src/tests/build/ZombieAttack.bin");
 
 const CONTRACT_NAME: &str = "near_evm";
 const SIGNER_NAME: &str = "test.near";

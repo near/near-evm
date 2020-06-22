@@ -6,10 +6,10 @@ use crate::EvmContract;
 
 use super::test_utils;
 
-use_contract!(cryptozombies, "src/tests/zombieAttack.abi");
+use_contract!(cryptozombies, "src/tests/build/ZombieAttack.abi");
 
 fn deploy_cryptozombies(contract: &mut EvmContract) -> String {
-    let zombie_code = include_bytes!("zombieAttack.bin").to_vec();
+    let zombie_code = include_bytes!("./build/ZombieAttack.bin").to_vec();
     contract.deploy_code(String::from_utf8(zombie_code).unwrap())
 }
 

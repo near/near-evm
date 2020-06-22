@@ -6,6 +6,7 @@ contracts=(
     "Create2Factory"
     "SelfDestruct"
     "ConstructorRevert"
+    "ZombieAttack"
 )
 
 truffle compile || exit 1

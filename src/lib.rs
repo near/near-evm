@@ -138,6 +138,7 @@ impl EvmContract {
     /// * When the contract encounters a revert during initialization
     #[payable]
     pub fn deploy_code(&mut self, bytecode: String) -> String {
+        near_sdk::env::log(format!("DEPLOY CODE!!!!!").as_bytes());
         let code = hex::decode(bytecode).expect("invalid hex");
         let sender = utils::predecessor_as_evm();
 
@@ -187,6 +188,7 @@ impl EvmContract {
     /// * When `contract_address` or `encoded_input` is not valid hex.
     #[payable]
     pub fn call_contract(&mut self, contract_address: String, encoded_input: String) -> String {
+        near_sdk::env::log(format!("CALL CONTRACT!!!!!").as_bytes());
         let contract_address = utils::hex_to_evm_address(&contract_address);
         let sender = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
@@ -215,14 +217,21 @@ impl EvmContract {
     ///
     /// * If the sender does not have sufficient NEAR balance in the EVM.
     pub fn move_funds_to_near_account(&mut self, address: AccountId, amount: Balance) {
+        near_sdk::env::log(format!("MOVE FUNDS!!!!!").as_bytes());
         let sender = utils::predecessor_as_evm();
+        near_sdk::env::log(format!("sender: {:?}", sender).as_bytes());
+        println!("sender: {:?}", sender);
         let recipient = utils::near_account_id_to_evm_address(&address);
+        near_sdk::env::log(format!("recipient: {:?}", recipient).as_bytes());
+        println!("recipient: {:?}", recipient);
         let amount = utils::balance_to_u256(&amount);
+        near_sdk::env::log(format!("amount: {:?}", amount).as_bytes());
+        println!("amount: {:?}", amount);
         self.transfer_balance(&sender, &recipient, amount);
     }
 
     /// Move internal EVM balance to another EVM account.
-    /// This generally functions as an ethereum transfer, but will NOT trigger fallback functions.
+    /// This generally functions as an ethereum trans`fer, but will NOT trigger fallback functions.
     ///
     /// # Arguments
     ///
@@ -273,6 +282,7 @@ impl EvmContract {
     /// * When no NEAR is attached to the call.
     #[payable]
     pub fn add_near(&mut self) -> Balance {
+        near_sdk::env::log(format!("ADD NEAR!!!!!").as_bytes());
         let val = utils::attached_deposit_as_u256_opt().expect("Did not attach value");
         let addr = &utils::predecessor_as_evm();
 

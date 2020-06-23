@@ -1,11 +1,12 @@
 #!/bin/bash
 
 contracts=(
+    "ConstructorRevert"
+    "Create2Factory"
+    "ERC20"
+    "SelfDestruct"
     "SolTests"
     "SubContract"
-    "Create2Factory"
-    "SelfDestruct"
-    "ConstructorRevert"
     "ZombieAttack"
 )
 

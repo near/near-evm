@@ -15,6 +15,6 @@ contract Benchmark {
             "ecrecover mismatch"
         );
     }
-}
 
-contract ERC20
+
+}

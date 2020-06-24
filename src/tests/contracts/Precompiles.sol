@@ -1,7 +1,15 @@
 pragma solidity ^0.5.8;
 
-contract Benchmark {
-    function benchecrecover() public pure {
+contract Precompiles {
+    function testSha2() public pure {
+        require(sha256("") == hex"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "sha2 digest mismatch");
+    }
+
+    function testRipemd160() public pure {
+        require(ripemd160("") == hex"9c1185a5c5e9fc54612808977ee8f548b2258d31", "rmd160 digest mismatch");
+    }
+
+    function testECRecover() public pure {
         // signed with hex"2222222222222222222222222222222222222222222222222222222222222222"
         address addr = ecrecover(
             hex"1111111111111111111111111111111111111111111111111111111111111111",
@@ -15,6 +23,4 @@ contract Benchmark {
             "ecrecover mismatch"
         );
     }
-
-
 }

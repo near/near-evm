@@ -9,11 +9,13 @@ use_contract!(soltest, "src/tests/build/SolTests.abi");
 use_contract!(subcontract, "src/tests/build/SubContract.abi");
 use_contract!(create2factory, "src/tests/build/Create2Factory.abi");
 use_contract!(selfdestruct, "src/tests/build/SelfDestruct.abi");
+use_contract!(precompiles, "src/tests/build/Precompiles.abi");
 
 lazy_static_include_str!(TEST, "src/tests/build/SolTests.bin");
 lazy_static_include_str!(FACTORY_TEST, "src/tests/build/Create2Factory.bin");
 lazy_static_include_str!(DESTRUCT_TEST, "src/tests/build/SelfDestruct.bin");
 lazy_static_include_str!(CONSTRUCTOR_TEST, "src/tests/build/ConstructorRevert.bin");
+lazy_static_include_str!(PRECOMPILES, "src/tests/build/Precompiles.bin");
 
 #[test]
 fn test_sends() {
@@ -112,12 +114,18 @@ fn test_deploy_and_transfer() {
 #[test]
 fn test_precompiles() {
     let mut contract = test_utils::initialize();
-    let test_addr = test_utils::tx_with_deposit(100, || {
-        contract.deploy_code(TEST.to_string())
-    });
+    let test_addr = contract.deploy_code(PRECOMPILES.to_string());
 
-    let (input, _) = soltest::functions::precompile_test::call();
-    let raw = contract.call_contract(test_addr.clone(), hex::encode(input.clone()));
+    let mut input = precompiles::functions::test_sha2::call().0;
+    let mut raw = contract.call_contract(test_addr.clone(), hex::encode(input.clone()));
+    assert_eq!(raw, "");
+
+    input = precompiles::functions::test_ripemd160::call().0;
+    raw = contract.call_contract(test_addr.clone(), hex::encode(input.clone()));
+    assert_eq!(raw, "");
+
+    input = precompiles::functions::test_ec_recover::call().0;
+    raw = contract.call_contract(test_addr.clone(), hex::encode(input.clone()));
     assert_eq!(raw, "");
 }
 

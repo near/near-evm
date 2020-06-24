@@ -4,6 +4,7 @@ contracts=(
     "ConstructorRevert"
     "Create2Factory"
     "ERC20"
+    "Precompiles"
     "SelfDestruct"
     "SolTests"
     "SubContract"

@@ -20,6 +20,7 @@ use_contract!(erc20, "src/tests/build/ERC20.abi");
 lazy_static_include_bytes!(EVM, "res/near_evm.wasm");
 lazy_static_include_str!(ZOMBIES, "src/tests/build/ZombieAttack.bin");
 lazy_static_include_str!(ERC20, "src/tests/build/ERC20.bin");
+// lazy_static_include_str!(PRECOMPILES, "src/tests/build/Precompiles.bin");
 
 const CONTRACT_NAME: &str = "near_evm";
 const SIGNER_NAME: &str = "test.near";
@@ -257,6 +258,24 @@ fn increase_allowance_erc20(client: &RpcUser, erc20_address: &str, spender: Addr
 }
 
 
+
+////////////////////////////////////////////////
+// Precompiles
+////////////////////////////////////////////////
+
+fn deploy_precompiles(client: &RpcUser) -> String {
+    let input = "".to_string();//format!("{{\"bytecode\":\"{}\"}}", PRECOMPILES);
+    execute_tx(
+        client,
+        SIGNER_NAME.to_owned(),
+        "deploy_code".to_string(),
+        input,
+        "deploy erc20:\t\t".to_owned(),
+        true
+    )
+}
+
+
 #[test]
 fn bench_test_all_in_one() {
     // Begin shared test prefix
@@ -274,20 +293,18 @@ fn bench_test_all_in_one() {
     create_account(&devnet_user, &contract_signer, SIGNER_NAME.to_owned());
     deploy_evm(&contract_user);
     // End shared test prefix
+    //
+    // ///////// CRYPTOZOMBIES //////
+    // let zombies_address = deploy_cryptozombies(&devnet_user);
+    // create_random_zombie(&devnet_user, &zombies_address, "zomb1");
+    //
+    // ///////// ERC20 //////
+    // let erc20_address = deploy_erc20(&devnet_user);
+    // transfer_erc20(&devnet_user, &erc20_address, U256::from(20));
+    // approve_erc20(&devnet_user, &erc20_address, contract_user_ethaddr, U256::from(10));
+    // transfer_from_erc20(&contract_user, &erc20_address, devnet_user_ethaddr, contract_user_ethaddr, U256::from(5));
+    // increase_allowance_erc20(&devnet_user, &erc20_address, contract_user_ethaddr, U256::from(30));
 
-
-    ///////// CRYPTOZOMBIES //////
-    let zombies_address = deploy_cryptozombies(&devnet_user);
-    create_random_zombie(&devnet_user, &zombies_address, "zomb1");
-
-
-    ///////// ERC20 //////
-    let erc20_address = deploy_erc20(&devnet_user);
-    transfer_erc20(&devnet_user, &erc20_address, U256::from(20));
-    approve_erc20(&devnet_user, &erc20_address, contract_user_ethaddr, U256::from(10));
-    transfer_from_erc20(&contract_user, &erc20_address, devnet_user_ethaddr, contract_user_ethaddr, U256::from(5));
-    increase_allowance_erc20(&devnet_user, &erc20_address, contract_user_ethaddr, U256::from(30));
-
-
-
+    ///////// Precompiles //////
+    // let precompiles_address = deploy_precompiles(&devnet_user);
 }

@@ -1,0 +1,8 @@
+{
+  "name": "solidity-benchmark",
+  "version": "0.1.0",
+  "devDependencies": {
+    "@openzeppelin/test-environment": "^0.1.4"
+  },
+  "scripts": {}
+}

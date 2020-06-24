@@ -24,4 +24,3 @@ for contractName in "${contracts[@]}"
           jq .abi \
           > build/"$contractName".abi
     done
-rm -rf build/contracts

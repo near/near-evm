@@ -17,7 +17,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 hex = "0.3.2"
 near-sdk = "0.11.0"
-borsh = "0.6.0"
+borsh = "^0.6.2"
 rlp = "0.4.2"
 keccak-hash = "0.2.0"
 num-bigint = { version = "0.3", default-features = false }
@@ -32,10 +32,10 @@ ethabi = "8.0.0"
 ethabi-contract = "8.0.0"
 ethabi-derive = "8.0.0"
 protobuf = "2.4"
-near-jsonrpc-client = { git = "https://github.com/nearprotocol/nearcore", branch = "master" }
-near-primitives = { git = "https://github.com/nearprotocol/nearcore", branch = "master" }
-near-crypto = { git = "https://github.com/nearprotocol/nearcore", branch = "master" }
-near-testlib = { git = "https://github.com/nearprotocol/nearcore", branch = "master", package = "testlib" }
+near-jsonrpc-client = { git = "https://github.com/nearprotocol/nearcore", branch = "stable" }
+near-primitives = { git = "https://github.com/nearprotocol/nearcore", branch = "stable" }
+near-crypto = { git = "https://github.com/nearprotocol/nearcore", branch = "stable" }
+near-testlib = { git = "https://github.com/nearprotocol/nearcore", branch = "stable", package = "testlib" }
 actix = "0.9"
 futures = "0.3"
 lazy-static-include = "2.2.2"

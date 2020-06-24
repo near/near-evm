@@ -37,8 +37,6 @@ fn create_account(client: &RpcUser, evm_account_signer: &InMemorySigner) {
     );
     if let FinalExecutionStatus::SuccessValue(_) = tx_result.as_ref().unwrap().status {
         println!("Create account Success");
-        // } else {
-        //     panic!(format!("Create account Failed {:?}", tx_result));
     }
 }
 

@@ -214,11 +214,12 @@ impl EvmContract {
     /// # Panics
     ///
     /// * If the sender does not have sufficient NEAR balance in the EVM.
-    pub fn move_funds_to_near_account(&mut self, address: AccountId, amount: Balance) {
+    pub fn move_funds_to_near_account(&mut self, address: AccountId, amount: Balance) -> bool {
         let sender = utils::predecessor_as_evm();
         let recipient = utils::near_account_id_to_evm_address(&address);
         let amount = utils::balance_to_u256(&amount);
         self.transfer_balance(&sender, &recipient, amount);
+        true // transfer successful: a return val is needed for web3 compatibility
     }
 
     /// Move internal EVM balance to another EVM account.
@@ -233,12 +234,13 @@ impl EvmContract {
     ///
     /// * If `address` is not valid hex.
     /// * If the sender does not have sufficient NEAR balance in the EVM.
-    pub fn move_funds_to_evm_address(&mut self, address: String, amount: Balance) {
+    pub fn move_funds_to_evm_address(&mut self, address: String, amount: Balance) -> bool {
         let recipient = utils::hex_to_evm_address(&address);
         let sender = utils::predecessor_as_evm();
         let amount = utils::balance_to_u256(&amount);
         self.sub_balance(&sender, amount);
         self.add_balance(&recipient, amount);
+        true // transfer successful: a return val is needed for web3 compatibility
     }
 
     /// Returns the EVM balance of a Near AccountId.
@@ -291,7 +293,7 @@ impl EvmContract {
     /// # Panics
     ///
     /// * If the sender does not have sufficient NEAR balance in the EVM.
-    pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) {
+    pub fn retrieve_near(&mut self, recipient: AccountId, amount: Balance) -> bool {
         let addr = utils::near_account_id_to_evm_address(&env::predecessor_account_id());
 
         if utils::u256_to_balance(&self.balance_of(&addr)) < amount {
@@ -307,6 +309,7 @@ impl EvmContract {
                 0,
                 (env::prepaid_gas() - env::used_gas()) / 2,
             ));
+        true // retrieval successful: a return val is needed for web3 compatibility
     }
 
     /// Internal method. Updates EVM accounting.

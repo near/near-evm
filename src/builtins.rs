@@ -13,6 +13,7 @@ use std::{
 use vm::{MessageCallResult, ReturnData};
 
 use near_sdk::env;
+use crate::{near_ext::NearExt, evm_state::EvmState};
 
 pub static COUNT: u64 = 9;
 
@@ -35,7 +36,7 @@ pub fn precompile(id: u64) -> Box<dyn Impl> {
     }
 }
 
-pub fn process_precompile(addr: &Address, input: &[u8]) -> MessageCallResult {
+pub fn process_precompile(ctx: &NearExt, addr: &Address, input: &[u8]) -> MessageCallResult {
     let f = precompile(addr.to_low_u64_be());
     let mut bytes = vec![];
     let mut output = parity_bytes::BytesRef::Flexible(&mut bytes);
@@ -43,6 +44,16 @@ pub fn process_precompile(addr: &Address, input: &[u8]) -> MessageCallResult {
     // mutates bytes
     f.execute(input, &mut output)
         .expect("No errors in precompiles");
+
+    // hijack ECDSA calls
+    if addr.to_low_u64_be() == 1 {
+        let produced = Address::from_slice(&bytes[12..]);
+        if let Some(addr) = ctx.sub_state.ecdsa_map_get(produced) {
+            bytes.clear();
+            bytes.extend(&[0; 12]);
+            bytes.extend(&addr[..]);
+        }
+    }
 
     let size = bytes.len();
 

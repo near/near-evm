@@ -5,6 +5,8 @@ use ethereum_types::{Address, U256};
 use crate::utils;
 
 pub trait EvmState {
+    fn ecdsa_map_get(&self, address: Address) -> Option<Address>;
+
     fn code_at(&self, address: &Address) -> Option<Vec<u8>>;
     fn set_code(&mut self, address: &Address, bytecode: &[u8]);
 
@@ -150,6 +152,10 @@ impl StateStore {
 }
 
 impl EvmState for StateStore {
+    fn ecdsa_map_get(&self, _address: Address) -> Option<Address> {
+        None
+    }
+
     fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
         let internal_addr = utils::evm_account_to_internal_address(*address);
         if self.self_destructs.contains(&internal_addr) {
@@ -231,6 +237,10 @@ impl SubState<'_> {
 }
 
 impl EvmState for SubState<'_> {
+    fn ecdsa_map_get(&self, address: Address) -> Option<Address> {
+        self.parent.ecdsa_map_get(address)
+    }
+
     fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
         let internal_addr = utils::evm_account_to_internal_address(*address);
         if self.state.self_destructs.contains(&internal_addr) {

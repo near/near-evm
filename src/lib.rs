@@ -34,6 +34,7 @@ pub struct EvmContract {
     balances: NearMap<Vec<u8>, [u8; 32]>,
     nonces: NearMap<Vec<u8>, [u8; 32]>,
     storages: NearTreeMap<Vec<u8>, [u8; 32]>,
+    ecrecover_aliases: NearMap<Vec<u8>, [u8; 32]>,
 }
 
 #[ext_contract]
@@ -42,6 +43,10 @@ pub trait Callback {
 }
 
 impl EvmState for EvmContract {
+    fn ecdsa_map_get(&self, address: Address) -> Option<Address> {
+        self.ecrecover_aliases.get(&address[..].to_vec()).map(|a| Address::from_slice(&a[12..]))
+    }
+
     // Default code of None
     fn code_at(&self, address: &Address) -> Option<Vec<u8>> {
         let internal_addr = utils::evm_account_to_internal_address(*address);

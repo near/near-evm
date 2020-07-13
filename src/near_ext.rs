@@ -175,7 +175,7 @@ impl<'a> vm::Ext for NearExt<'a> {
 
         // hijack builtins
         if crate::builtins::is_precompile(receive_address) {
-            return Ok(crate::builtins::process_precompile(receive_address, data));
+            return Ok(crate::builtins::process_precompile(self, receive_address, data));
         }
 
         let result = match call_type {

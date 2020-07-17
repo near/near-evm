@@ -361,10 +361,32 @@ impl EvmContract {
         utils::u256_to_balance(&self.nonce_of(&addr))
     }
 
-    pub fn register_ecdsa_alisa(&mut self, signature: String) {
+
+    /// Register an ECDSA alias. This is an ECDSA key that is allowed to make updates and sign
+    /// messages on behalf of your Near-EVM account. This allows Near-EVM contracts to effectively
+    /// use EcRecover to seamlessly use Ethereum metatransactions and other signature-driven
+    /// features without integrating Near's signature scheme into the Near-EVM.
+    ///
+    /// To register an alias, the key must sign the Near-EVM address, AND the Near account
+    /// corresponding to that address must submit the signature. This prevents replay attacks,
+    /// and registering keys that are not actually controlled by the Near account holder.
+    ///
+    /// The message format uses the standard `Ethereum Signed Message` format, and can be produced
+    /// by `eth_sign` or `eth_signPersonal`. The body of the message is the hex of the address
+    /// (without the "0x" prefix). This creates a message length of 40 bytes (20 bytes, encoded as
+    /// a hex) string.
+    ///
+    /// # Arguments
+    ///
+    /// * `signature` - a valid ethereum-formatted signature
+    ///
+    /// # Panics
+    ///
+    /// * When `signature` is not valid hex.
+    pub fn register_ecdsa_alias(&mut self, signature: String) {
         let target = utils::predecessor_as_evm();
-        let mut message = format!("\x19Ethereum Signed Message:\n{}", 20).into_bytes();
-        message.extend(target.as_bytes());
+        let mut message = format!("\x19Ethereum Signed Message:\n{}", 40).into_bytes();
+        message.extend(target.to_string().as_bytes());
 
         let signature_bytes = hex::decode(&signature).expect("valid hex input");
 

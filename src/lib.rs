@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use ethereum_types::{Address, U256};
+use ethereum_types::{Address, H256, U256};
 use vm::CreateContractAddress;
 
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -43,6 +43,7 @@ pub trait Callback {
 }
 
 impl EvmState for EvmContract {
+
     fn ecdsa_map_get(&self, address: Address) -> Option<Address> {
         self.ecrecover_aliases.get(&address[..].to_vec()).map(|a| Address::from_slice(&a[12..]))
     }
@@ -359,6 +360,26 @@ impl EvmContract {
         let addr = utils::hex_to_evm_address(&address);
         utils::u256_to_balance(&self.nonce_of(&addr))
     }
+
+    pub fn register_ecdsa_alisa(&mut self, signature: String) {
+        let target = utils::predecessor_as_evm();
+        let mut message = format!("\x19Ethereum Signed Message:\n{}", 20).into_bytes();
+        message.extend(target.as_bytes());
+
+        let signature_bytes = hex::decode(&signature).expect("valid hex input");
+
+        let mut ecdsa_input = vec![];
+        ecdsa_input.extend(keccak_hash::keccak(message).as_bytes());
+        ecdsa_input.extend(signature_bytes);
+
+        let mut output = vec![];
+        crate::builtins::run_stateless(&Address::from_low_u64_be(1), &ecdsa_input, &mut output);
+
+        self.ecdsa_map_set(
+            &Address::from_slice(&output[12..]),
+            &target
+        );
+    }
 }
 
 /// view_call_contract cannot implement #[near_bindgen_macro] because it is treated as a transaction call
@@ -438,6 +459,13 @@ pub extern "C" fn view_call_contract() {
 }
 
 impl EvmContract {
+    fn ecdsa_map_set(&mut self, address: &Address, alias_to: &Address) {
+        self.ecrecover_aliases.insert(
+            &address.as_bytes().to_vec(),
+            &H256::from(*alias_to).to_fixed_bytes(),
+        );
+    }
+
     fn commit_code(&mut self, other: &HashMap<[u8; 20], Vec<u8>>) {
         self.code
             .extend(other.iter().map(|(k, v)| (k.to_vec(), v.clone())));

@@ -36,14 +36,19 @@ pub fn precompile(id: u64) -> Box<dyn Impl> {
     }
 }
 
-pub fn process_precompile(ctx: &NearExt, addr: &Address, input: &[u8]) -> MessageCallResult {
+pub fn run_stateless(addr: &Address, input: &[u8], output: &mut Vec<u8>) {
     let f = precompile(addr.to_low_u64_be());
-    let mut bytes = vec![];
-    let mut output = parity_bytes::BytesRef::Flexible(&mut bytes);
+    let mut result = parity_bytes::BytesRef::Flexible(output);
 
     // mutates bytes
-    f.execute(input, &mut output)
+    f.execute(input, &mut result)
         .expect("No errors in precompiles");
+}
+
+pub fn process_precompile(ctx: &NearExt, addr: &Address, input: &[u8]) -> MessageCallResult {
+    let mut bytes = vec![];
+
+    run_stateless(addr, input, &mut bytes);
 
     // hijack ECDSA calls
     if addr.to_low_u64_be() == 1 {
@@ -94,7 +99,7 @@ impl Into<vm::Error> for Error {
     }
 }
 #[derive(Debug)]
-struct EcRecover;
+pub struct EcRecover;
 
 #[derive(Debug)]
 struct Sha256;

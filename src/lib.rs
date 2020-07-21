@@ -398,11 +398,13 @@ impl EvmContract {
         let mut message = format!("\x19Ethereum Signed Message:\n{}", body.len());
         message.push_str(&body);
 
+
         let signature_bytes = hex::decode(&signature).expect("valid hex input");
         let signature_bytes = utils::parse_rsv(&signature_bytes);
 
+        // ecrecover expects digest, v, r, s to be 32 bytes each.
         let mut ecdsa_input = vec![];
-        ecdsa_input.extend(keccak_hash::keccak(message).as_bytes());
+        ecdsa_input.extend(keccak_hash::keccak(&message).as_bytes());
         ecdsa_input.extend(&signature_bytes[..]);
 
         let mut output = vec![];

@@ -372,9 +372,18 @@ impl EvmContract {
     /// and registering keys that are not actually controlled by the Near account holder.
     ///
     /// The message format uses the standard `Ethereum Signed Message` format, and can be produced
-    /// by `eth_sign` or `eth_signPersonal`. The body of the message is the hex of the address
-    /// (without the "0x" prefix). This creates a message length of 40 bytes (20 bytes, encoded as
-    /// a hex) string.
+    /// by `eth_sign` or `eth_signPersonal`. The body of the message is the account ID prepended
+    /// by the string "Near ecrecover alias: ". Note the lack of new line.
+    ///
+    /// # Note
+    ///
+    /// The `signature` argument is a hex string encoding the sigature in RSV format. This is the
+    /// typical output of a call to `personal_sign` in Metamask. It is usually exactly 65 bytes
+    /// long (130 hex characters), but may be longer if the chain ID is set to a high value. The
+    /// encoded string is NOT prepended by "0x".
+    ///
+    /// This contrasts with the VRS representation used by the EVM internally, and the two should
+    /// not be confused.
     ///
     /// # Arguments
     ///
@@ -383,6 +392,7 @@ impl EvmContract {
     /// # Panics
     ///
     /// * When `signature` is not valid hex.
+    /// * When the signature is invalid.
     pub fn register_ecdsa_alias(&mut self, signature: String) {
         let body = format!("Near ecrecover alias: {}", env::predecessor_account_id());
         let mut message = format!("\x19Ethereum Signed Message:\n{}", body.len());
@@ -395,14 +405,14 @@ impl EvmContract {
         ecdsa_input.extend(keccak_hash::keccak(message).as_bytes());
         ecdsa_input.extend(&signature_bytes[..]);
 
-        dbg!(hex::encode(&ecdsa_input));
-
         let mut output = vec![];
         crate::builtins::run_stateless(
             &Address::from_low_u64_be(1),
             &ecdsa_input,
             &mut output
         );
+
+        assert!(output.len() == 32, "Invalid ECDSA signature.");
 
         self.set_ecrecover_alias(
             &Address::from_slice(&output[12..32]),

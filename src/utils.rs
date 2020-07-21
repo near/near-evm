@@ -138,3 +138,27 @@ impl From<Balance> for u128 {
         balance.0
     }
 }
+
+
+pub fn parse_rsv(rsv_sig: &[u8]) -> [u8; 96] {
+    assert!(rsv_sig.len() > 64, "Too short to be an rsv");
+    let v_len = rsv_sig.len() - 64;
+
+    let mut output = [0u8; 96];
+    output[32 - v_len..32].copy_from_slice(&rsv_sig[64..]);
+    output[32..64].copy_from_slice(&rsv_sig[..32]);
+    output[64..].copy_from_slice(&rsv_sig[32..64]);
+    output
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn it_parses_rsv_sigs() {
+        let sig = hex::decode("6caed388392227b043d47f2fde914ffe290f44475ce201b3002206c954b2e30a4790c1cc7a38838862ecb0b7f62852fa8e4882452ba8de9b65a6c9cef8187dd31b").unwrap();
+        let parsed = parse_rsv(&sig);
+        assert_eq!(&parsed[32..], &sig[..64]);
+        assert_eq!(parsed[31], sig[64]);
+    }
+}

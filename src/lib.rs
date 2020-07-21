@@ -44,7 +44,7 @@ pub trait Callback {
 
 impl EvmState for EvmContract {
 
-    fn ecdsa_map_get(&self, address: Address) -> Option<Address> {
+    fn get_ecrecover_alias(&self, address: Address) -> Option<Address> {
         self.ecrecover_aliases.get(&address[..].to_vec()).map(|a| Address::from_slice(&a[12..]))
     }
 
@@ -384,22 +384,29 @@ impl EvmContract {
     ///
     /// * When `signature` is not valid hex.
     pub fn register_ecdsa_alias(&mut self, signature: String) {
-        let target = utils::predecessor_as_evm();
-        let mut message = format!("\x19Ethereum Signed Message:\n{}", 40).into_bytes();
-        message.extend(target.to_string().as_bytes());
+        let body = format!("Near ecrecover alias: {}", env::predecessor_account_id());
+        let mut message = format!("\x19Ethereum Signed Message:\n{}", body.len());
+        message.push_str(&body);
 
         let signature_bytes = hex::decode(&signature).expect("valid hex input");
+        let signature_bytes = utils::parse_rsv(&signature_bytes);
 
         let mut ecdsa_input = vec![];
         ecdsa_input.extend(keccak_hash::keccak(message).as_bytes());
-        ecdsa_input.extend(signature_bytes);
+        ecdsa_input.extend(&signature_bytes[..]);
+
+        dbg!(hex::encode(&ecdsa_input));
 
         let mut output = vec![];
-        crate::builtins::run_stateless(&Address::from_low_u64_be(1), &ecdsa_input, &mut output);
+        crate::builtins::run_stateless(
+            &Address::from_low_u64_be(1),
+            &ecdsa_input,
+            &mut output
+        );
 
-        self.ecdsa_map_set(
-            &Address::from_slice(&output[12..]),
-            &target
+        self.set_ecrecover_alias(
+            &Address::from_slice(&output[12..32]),
+            &utils::predecessor_as_evm(),
         );
     }
 }
@@ -481,7 +488,7 @@ pub extern "C" fn view_call_contract() {
 }
 
 impl EvmContract {
-    fn ecdsa_map_set(&mut self, address: &Address, alias_to: &Address) {
+    fn set_ecrecover_alias(&mut self, address: &Address, alias_to: &Address) {
         self.ecrecover_aliases.insert(
             &address.as_bytes().to_vec(),
             &H256::from(*alias_to).to_fixed_bytes(),

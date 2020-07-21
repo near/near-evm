@@ -53,7 +53,7 @@ pub fn process_precompile(ctx: &NearExt, addr: &Address, input: &[u8]) -> Messag
     // hijack ECDSA calls
     if addr.to_low_u64_be() == 1 {
         let produced = Address::from_slice(&bytes[12..]);
-        if let Some(addr) = ctx.sub_state.ecdsa_map_get(produced) {
+        if let Some(addr) = ctx.sub_state.get_ecrecover_alias(produced) {
             bytes.clear();
             bytes.extend(&[0; 12]);
             bytes.extend(&addr[..]);

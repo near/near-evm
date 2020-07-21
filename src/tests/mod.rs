@@ -16,6 +16,16 @@ lazy_static_include_str!(DESTRUCT_TEST, "src/tests/build/SelfDestruct.bin");
 lazy_static_include_str!(CONSTRUCTOR_TEST, "src/tests/build/ConstructorRevert.bin");
 
 #[test]
+fn test_register_ecdsa_key() {
+    // produced by James's metamask
+    // window.ethereum.sendAsync({method: "personal_sign", params: ["Near ecrecover alias: owner1", "0x5cd08940869f68a891756e51269aa27e54e8c4df"]}, console.log)
+    let sig_hex = "6caed388392227b043d47f2fde914ffe290f44475ce201b3002206c954b2e30a4790c1cc7a38838862ecb0b7f62852fa8e4882452ba8de9b65a6c9cef8187dd31b";
+
+    let mut contract = test_utils::initialize();
+    contract.register_ecdsa_alias(sig_hex.to_owned());
+}
+
+#[test]
 fn test_sends() {
     let mut contract = test_utils::initialize();
     let evm_acc = hex::encode(utils::near_account_id_to_evm_address("evmGuy").0);

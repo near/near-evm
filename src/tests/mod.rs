@@ -26,6 +26,43 @@ fn test_register_ecdsa_key() {
 }
 
 #[test]
+fn test_ecrecover_aliasing() {
+    // keccak256 Digest of "Near ecrecover alias: owner1"
+    let digest: H256 = "e4ae231579f66451de357f961867f7f990e2b4084de5989cc710d8ee933ac88d".parse().unwrap();
+
+    // James metamask address
+    let unaliased: Address = "5Cd08940869F68a891756e51269Aa27E54E8c4df".parse().unwrap();
+    let aliased = utils::near_account_id_to_evm_address(&"owner1");
+
+    // produced by James's metamask
+    // window.ethereum.sendAsync({method: "personal_sign", params: ["Near ecrecover alias: owner1", "0x5cd08940869f68a891756e51269aa27e54e8c4df"]}, console.log)
+    let sig_hex = "6caed388392227b043d47f2fde914ffe290f44475ce201b3002206c954b2e30a4790c1cc7a38838862ecb0b7f62852fa8e4882452ba8de9b65a6c9cef8187dd31b";
+
+    // Parse sig to be acceptable for ecrecover
+    let vrs = crate::utils::parse_rsv(&hex::decode(sig_hex).unwrap());
+    let v = vrs[31];
+    let r = H256::from_slice(&vrs[32..64]);
+    let s = H256::from_slice(&vrs[64..]);
+
+    // init contract
+    let mut contract = test_utils::initialize();
+    let test_addr = contract.deploy_code(TEST.to_string());
+
+    // call ecrecover. we expect to get our unaliased address
+    let (input, _) = soltest::functions::ecdsa_recovery::call(digest, v, r, s);
+    let output = contract.call_contract(test_addr.clone(), hex::encode(input));
+    assert_eq!(output[24..].parse::<Address>().unwrap(), unaliased);
+
+    // set up the alias
+    contract.register_ecdsa_alias(sig_hex.to_owned());
+
+    // call ecrecover again. we expect the aliased output
+    let (input, _) = soltest::functions::ecdsa_recovery::call(digest, v, r, s);
+    let output = contract.call_contract(test_addr.clone(), hex::encode(input));
+    assert_eq!(output[24..].parse::<Address>().unwrap(), aliased);
+}
+
+#[test]
 fn test_sends() {
     let mut contract = test_utils::initialize();
     let evm_acc = hex::encode(utils::near_account_id_to_evm_address("evmGuy").0);

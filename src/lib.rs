@@ -367,6 +367,9 @@ impl EvmContract {
     /// use EcRecover to seamlessly use Ethereum metatransactions and other signature-driven
     /// features without integrating Near's signature scheme into the Near-EVM.
     ///
+    /// Users may register multiple aliases, which are all effective. Users currently cannot
+    /// revoke aliases.
+    ///
     /// To register an alias, the key must sign the Near-EVM address, AND the Near account
     /// corresponding to that address must submit the signature. This prevents replay attacks,
     /// and registering keys that are not actually controlled by the Near account holder.
@@ -393,7 +396,7 @@ impl EvmContract {
     ///
     /// * When `signature` is not valid hex.
     /// * When the signature is invalid.
-    pub fn register_ecdsa_alias(&mut self, signature: String) {
+    pub fn register_ecdsa_alias(&mut self, signature: String) -> bool {
         let body = format!("Near ecrecover alias: {}", env::predecessor_account_id());
         let mut message = format!("\x19Ethereum Signed Message:\n{}", body.len());
         message.push_str(&body);
@@ -420,6 +423,7 @@ impl EvmContract {
             &Address::from_slice(&output[12..32]),
             &utils::predecessor_as_evm(),
         );
+        true
     }
 }
 

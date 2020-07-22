@@ -5,7 +5,7 @@ use vm::CreateContractAddress;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use near_sdk::collections::{TreeMap as NearTreeMap, UnorderedMap as NearMap};
+use near_sdk::collections::{TreeMap as NearTreeMap, UnorderedMap as NearMap, UnorderedSet as NearSet};
 use near_sdk::{env, ext_contract, near_bindgen as near_bindgen_macro, AccountId, Promise};
 
 use crate::evm_state::{EvmState, StateStore};
@@ -35,6 +35,7 @@ pub struct EvmContract {
     nonces: NearMap<Vec<u8>, [u8; 32]>,
     storages: NearTreeMap<Vec<u8>, [u8; 32]>,
     ecrecover_aliases: NearMap<Vec<u8>, [u8; 32]>,
+    revoked_aliases: NearSet<Vec<u8>>
 }
 
 #[ext_contract]
@@ -367,8 +368,9 @@ impl EvmContract {
     /// use EcRecover to seamlessly use Ethereum metatransactions and other signature-driven
     /// features without integrating Near's signature scheme into the Near-EVM.
     ///
-    /// Users may register multiple aliases, which are all effective. Users currently cannot
-    /// revoke aliases.
+    /// Users may register multiple aliases, which are all effective. To revoke an alias, use
+    /// `revoke_ecdsa_alias`. The recommended usage is to give keys explicit, temporary lifespans
+    /// in the application.
     ///
     /// To register an alias, the key must sign the Near-EVM address, AND the Near account
     /// corresponding to that address must submit the signature. This prevents replay attacks,
@@ -392,6 +394,10 @@ impl EvmContract {
     ///
     /// * `signature` - a valid ethereum-formatted signature
     ///
+    /// # Returns
+    ///
+    /// True if succesfully registered. False if the key was previously revoked, or is registered elsewhere.
+    ///
     /// # Panics
     ///
     /// * When `signature` is not valid hex.
@@ -400,7 +406,6 @@ impl EvmContract {
         let body = format!("Near ecrecover alias: {}", env::predecessor_account_id());
         let mut message = format!("\x19Ethereum Signed Message:\n{}", body.len());
         message.push_str(&body);
-
 
         let signature_bytes = hex::decode(&signature).expect("valid hex input");
         let signature_bytes = utils::parse_rsv(&signature_bytes);
@@ -419,11 +424,53 @@ impl EvmContract {
 
         assert!(output.len() == 32, "Invalid ECDSA signature.");
 
+        let signer = Address::from_slice(&output[12..32]);
+        if self.revoked_aliases.contains(&signer[..].to_vec()) || self.ecrecover_aliases.get(&signer[..].to_vec()).is_some() {
+            return false;
+        }
+
         self.set_ecrecover_alias(
-            &Address::from_slice(&output[12..32]),
+            &signer,
             &utils::predecessor_as_evm(),
         );
         true
+    }
+
+
+    /// Allow a Near account to permanently revoke an ECDSA alias it controls. The Near account
+    /// must have previously registered the alias, and it must still be active (not previously
+    /// revoked).
+    ///
+    /// Once an ECDSA alias is revoked, it may NEVER be used to alias any account again. This is a
+    /// permanent, global, revocation.
+    ///
+    /// # Arguments
+    ///
+    /// * `signature` - a valid ethereum-formatted signature
+    ///
+    /// # Returns
+    ///
+    /// True if succesfully revoked False if the key was never registered.
+    ///
+    /// # Warning
+    ///
+    /// This CANNOT be undone. The key can NEVER be aliased again.
+    ///
+    /// # Panics
+    ///
+    /// - When alias_address is not a valid EVM address
+    pub fn revoke_ecdsa_alias(&mut self, alias_address: String) -> bool {
+        let sender = utils::predecessor_as_evm();
+        let alias = utils::hex_to_evm_address(&alias_address);
+
+        if self.get_ecrecover_alias(alias) == Some(sender) {
+            self.set_ecrecover_alias(&alias, &alias);
+            self.revoked_aliases.insert(&alias[..].to_vec());
+            true
+        } else {
+            false
+        }
+
     }
 }
 

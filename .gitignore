@@ -4,3 +4,4 @@ res/
 neardev/
 src/test/build/
 src/tests/build/
+node_modules/

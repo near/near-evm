@@ -27,6 +27,19 @@ mod near_ext;
 pub mod utils;
 
 /// Represents the state of the EVM. All NearMaps are persisted to Near chain storage
+///
+/// The EVM contract public interface. Generally, the EVM handles ethereum-style 20-byte
+/// hex-encoded addresses. External Near accountIDs are converted to EVM addresses by hashing
+/// them, and taking the final 20 bytes of the hash. Which is to say, they roughly correspond to
+/// Ethereum's externally-owned-account public keys.
+///
+/// The EVM holds NEAR and keeps an internal balances mapping to all EVM accounts. Therefore EVM
+/// contracts can hold NEAR and interact with it.
+///
+/// # Note:
+///
+/// Logs are mapped to a byte vector by Length-prepending the topics and then appending the data.
+/// E.g. an event with 3 topics will be serialized as `0x03[topic1][topic2][topic3][data]`.
 #[near_bindgen_macro]
 #[derive(BorshDeserialize, BorshSerialize, Default)]
 pub struct EvmContract {
@@ -101,13 +114,6 @@ impl EvmState for EvmContract {
     }
 }
 
-/// The EVM contract public interface. Generally, the EVM handles ethereum-style 20-byte
-/// hex-encoded addresses. External Near accountIDs are converted to EVM addresses by hashing
-/// them, and taking the final 20 bytes of the hash. Which is to say, they roughly correspond to
-/// Ethereum's externally-owned-account public keys.
-///
-/// The EVM holds NEAR and keeps an internal balances mapping to all EVM accounts. Therefore EVM
-/// contracts can hold NEAR and interact with it.
 #[near_bindgen_macro]
 impl EvmContract {
     /// Returns the storage at a particular slot, as a hex-encoded. Slots are 32-bytes wide,

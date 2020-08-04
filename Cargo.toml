@@ -24,7 +24,7 @@ num-bigint = { version = "0.3", default-features = false }
 num-traits = "0.2.12"
 byteorder = "1.0"
 ripemd160 = "0.9.0"
-libsecp256k1 = "0.3.5"
+# libsecp256k1 = "0.3.5"
 
 [dev-dependencies]
 lazy_static = "1.4"
@@ -39,6 +39,7 @@ near-testlib = { git = "https://github.com/nearprotocol/nearcore", branch = "mas
 actix = "0.9"
 futures = "0.3"
 lazy-static-include = "2.2.2"
+bencher = "0.1.5"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -53,3 +54,7 @@ panic = "abort"
 
 [features]
 default = []
+
+[[bench]]
+name = "basic"
+harness = false

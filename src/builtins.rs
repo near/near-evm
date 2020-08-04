@@ -124,34 +124,34 @@ impl Impl for Identity {
 
 impl Impl for EcRecover {
 	fn execute(&self, i: &[u8], output: &mut BytesRef) -> Result<(), Error> {
-        let len = min(i.len(), 128);
+        // let len = min(i.len(), 128);
 
-		let mut input = [0; 128];
-		input[..len].copy_from_slice(&i[..len]);
+		// let mut input = [0; 128];
+		// input[..len].copy_from_slice(&i[..len]);
 
-		let hash = secp256k1::Message::parse(&H256::from_slice(&input[0..32]).0);
-		let v = &input[32..64];
-		let r = &input[64..96];
-		let s = &input[96..128];
+		// let hash = secp256k1::Message::parse(&H256::from_slice(&input[0..32]).0);
+		// let v = &input[32..64];
+		// let r = &input[64..96];
+		// let s = &input[96..128];
 
-		let bit = match v[31] {
-			27..=30 => v[31] - 27,
-			_ => { return Ok(()); },
-		};
+		// let bit = match v[31] {
+		// 	27..=30 => v[31] - 27,
+		// 	_ => { return Ok(()); },
+		// };
 
-        let mut sig = [0u8; 64];
-        sig[..32].copy_from_slice(&r);
-        sig[32..].copy_from_slice(&s);
-        let s = secp256k1::Signature::parse(&sig);
+        // let mut sig = [0u8; 64];
+        // sig[..32].copy_from_slice(&r);
+        // sig[32..].copy_from_slice(&s);
+        // let s = secp256k1::Signature::parse(&sig);
 
-        if let Ok(rec_id) = secp256k1::RecoveryId::parse(bit) {
-            if let Ok(p) = secp256k1::recover(&hash, &s, &rec_id) {
-                // recover returns the 65-byte key, but addresses come from the raw 64-byte key
-                let r = env::keccak256(&p.serialize()[1..]);
-                output.write(0, &[0; 12]);
-                output.write(12, &r[12..]);
-            }
-        }
+        // if let Ok(rec_id) = secp256k1::RecoveryId::parse(bit) {
+        //     if let Ok(p) = secp256k1::recover(&hash, &s, &rec_id) {
+        //         // recover returns the 65-byte key, but addresses come from the raw 64-byte key
+        //         let r = env::keccak256(&p.serialize()[1..]);
+        //         output.write(0, &[0; 12]);
+        //         output.write(12, &r[12..]);
+        //     }
+        // }
 
 		Ok(())
 	}

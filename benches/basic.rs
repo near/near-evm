@@ -49,12 +49,21 @@ fn deploy_cryptozombies(contract: &mut EvmContract) -> String {
     contract.deploy_code(String::from_utf8(zombie_code).unwrap())
 }
 
-fn crypto_zombie(bench: &mut Bencher) {
+fn contract_deploy(bench: &mut Bencher) {
+    let mut contract = initialize();
+    bench.iter(|| {
+        set_default_context();
+        let _addr = deploy_cryptozombies(&mut contract);
+    });
+}
+
+fn contract_calls(bench: &mut Bencher) {
     let mut contract = initialize();
     let addr = deploy_cryptozombies(&mut contract);
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call("test".to_string());
     contract.call_contract(addr.clone(), hex::encode(input));
     bench.iter(|| {
+        set_default_context();
         let (input, _decoder) = cryptozombies::functions::create_random_zombie::call("test".to_string());
         contract.call_contract(addr.clone(), hex::encode(input));
     });
@@ -62,6 +71,7 @@ fn crypto_zombie(bench: &mut Bencher) {
 
 benchmark_group!(
     benches,
-    crypto_zombie,
+    contract_deploy,
+    contract_calls
 );
 benchmark_main!(benches);

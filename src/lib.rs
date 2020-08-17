@@ -199,7 +199,8 @@ impl EvmContract {
 
         match result {
             Ok(v) => hex::encode(v),
-            Err(s) => format!("internal call failed: {}", s),
+            // Errors are coming hex encoded twice.
+            Err(s) => env::panic(&hex::decode(s).expect("Failed to deserialize hex")),
         }
     }
 
@@ -397,7 +398,7 @@ impl EvmContract {
 
         match result {
             Ok(v) => hex::encode(v),
-            Err(s) => format!("internal call failed: {}", s),
+            Err(s) => format!("Reverted {}", s),
         }
     }
 }

@@ -199,8 +199,7 @@ impl EvmContract {
 
         match result {
             Ok(v) => hex::encode(v),
-            // Errors are coming hex encoded twice.
-            Err(s) => env::panic(&hex::decode(s).expect("Failed to deserialize hex")),
+            Err(s) => env::panic(s.as_bytes()),
         }
     }
 

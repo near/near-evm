@@ -199,7 +199,7 @@ impl EvmContract {
 
         match result {
             Ok(v) => hex::encode(v),
-            Err(s) => format!("internal call failed: {}", s),
+            Err(s) => env::panic(s.as_bytes()),
         }
     }
 
@@ -397,7 +397,7 @@ impl EvmContract {
 
         match result {
             Ok(v) => hex::encode(v),
-            Err(s) => format!("internal call failed: {}", s),
+            Err(s) => format!("Reverted {}", s),
         }
     }
 }

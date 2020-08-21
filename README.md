@@ -35,10 +35,13 @@ npm install -g near-shell
 
 * If you are using TestNet, call `near login` (if you are using local node use `NODE_ENV=development` before commands below).
 
-* Create contract's account, e.g. we will use `evm`:
+* Create a contract's account under your master account (the account you used in `near login`/test.near for local).
+  Here the contract's account is `evm.yourAccount.testnet`, and the master account is `yourAccount.testnet`.
+
 ```shell
-near create_account evm --masterAccount=<account you used in near login/test.near for local>
+near create-account evm.yourAccount.testnet --masterAccount=yourAccount.testnet
 ```
+
 
 * Deploy the compiled contract from `res/near_evm.wasm` at the building step:
 ```shell

@@ -262,10 +262,19 @@ impl<'a> vm::Ext for NearExt<'a> {
     }
 
     /// Creates log entry with given topics and data
-    fn log(&mut self, _topics: Vec<H256>, data: &[u8]) -> EvmResult<()> {
+    fn log(&mut self, topics: Vec<H256>, data: &[u8]) -> EvmResult<()> {
+
         if self.is_static() {
             return Err(VmError::MutableCallInStaticContext);
         }
+
+        let mut payload = vec![];
+        payload.push(topics.len() as u8);
+        for topic in topics.iter() {
+            payload.extend(topic.as_ref());
+        }
+        payload.extend(data);
+
 
         // TODO: Develop a NearCall logspec
         //       hijack NearCall logs here
@@ -273,7 +282,7 @@ impl<'a> vm::Ext for NearExt<'a> {
         //       return them after execution completes
         //       dispatch promises
 
-        self.sub_state.state.logs.push(hex::encode(data));
+        self.sub_state.state.logs.push(hex::encode(payload));
         Ok(())
     }
 

@@ -75,7 +75,8 @@ pub fn _create<T: EvmState>(
         address: *address,
         sender: *sender,
         origin: *origin,
-        gas: 1_000_000_000.into(),
+        gas: 1_000_000_000_000_000u64.into(), // todo
+        // gas: 1_000_000_000.into(), // todo
         gas_price: 1.into(),
         value: ActionValue::Transfer(value),
         code: Some(Arc::new(code.to_vec())),
@@ -94,7 +95,8 @@ pub fn _create<T: EvmState>(
         call_stack_depth + 1,
         false,
     );
-    ext.info.gas_limit = U256::from(1_000_000_000);
+    ext.info.gas_limit = U256::from(1_000_000_000_000_000u64);
+    // ext.info.gas_limit = U256::from(1_000_000_000);
     ext.schedule = Schedule::new_constantinople();
 
     let instance = Factory::default().create(params, ext.schedule(), ext.depth());
@@ -257,7 +259,8 @@ fn run_against_state<T: EvmState>(
         address: *state_address,
         sender: *sender,
         origin: *origin,
-        gas: 1_000_000_000.into(),
+        gas: 1_000_000_000_000_000u64.into(),
+        // gas: 1_000_000_000.into(),
         gas_price: 1.into(),
         value: ActionValue::Apparent(0.into()),
         code: Some(Arc::new(code)),
@@ -279,7 +282,8 @@ fn run_against_state<T: EvmState>(
         call_stack_depth + 1,
         is_static,
     );
-    ext.info.gas_limit = U256::from(1_000_000_000);
+    ext.info.gas_limit = U256::from(1_000_000_000_000_000u64);
+    // ext.info.gas_limit = U256::from(1_000_000_000);
     ext.schedule = Schedule::new_constantinople();
 
     let instance = Factory::default().create(params, ext.schedule(), ext.depth());

@@ -46,7 +46,8 @@ pub fn process_precompile(addr: &Address, input: &[u8]) -> MessageCallResult {
 
     let size = bytes.len();
 
-    MessageCallResult::Success(1_000_000_000.into(), ReturnData::new(bytes, 0, size))
+    // MessageCallResult::Success(1_000_000_000.into(), ReturnData::new(bytes, 0, size))
+    MessageCallResult::Success(1_000_000_000_000_000u64.into(), ReturnData::new(bytes, 0, size))
 }
 
 /** the following is copied from ethcore/src/builtin.rs **/

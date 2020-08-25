@@ -150,7 +150,8 @@ impl<'a> vm::Ext for NearExt<'a> {
             &code.to_vec(),
         );
 
-        Ok(ContractCreateResult::Created(addr, 1_000_000_000.into()))
+        Ok(ContractCreateResult::Created(addr, 1_000_000_000_000_000u64.into()))
+        // Ok(ContractCreateResult::Created(addr, 1_000_000_000.into()))
     }
 
     /// Message call.
@@ -220,12 +221,14 @@ impl<'a> vm::Ext for NearExt<'a> {
         };
 
         let msg_call_result = match result {
-            Ok(data) => MessageCallResult::Success(1_000_000_000.into(), data),
+            // Ok(data) => MessageCallResult::Success(1_000_000_000.into(), data),
+            Ok(data) => MessageCallResult::Success(1_000_000_000_000_000u64.into(), data),
             Err(s) => {
                 let message = s.as_bytes().to_vec();
                 let message_len = message.len();
                 MessageCallResult::Reverted(
-                    1_000_000_000.into(),
+                    1_000_000_000_000_000u64.into(),
+                    // 1_000_000_000.into(),
                     ReturnData::new(message, 0, message_len),
                 )
             }

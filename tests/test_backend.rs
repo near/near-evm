@@ -4,16 +4,18 @@ use primitive_types::{H160, H256, U256};
 use std::collections::{BTreeMap, HashMap};
 
 pub struct TestBackend {
-    origin: H160,
-    accounts: HashMap<H160, Basic>,
-    codes: HashMap<H160, Vec<u8>>,
-    storages: HashMap<H160, HashMap<H256, H256>>,
+    pub origin: H160,
+    pub timestamp: U256,
+    pub accounts: HashMap<H160, Basic>,
+    pub codes: HashMap<H160, Vec<u8>>,
+    pub storages: HashMap<H160, HashMap<H256, H256>>,
 }
 
 impl TestBackend {
     pub fn new(origin: H160) -> Self {
         Self {
             origin,
+            timestamp: U256::zero(),
             accounts: Default::default(),
             codes: Default::default(),
             storages: Default::default(),
@@ -47,7 +49,7 @@ impl Backend for TestBackend {
     }
 
     fn block_timestamp(&self) -> U256 {
-        unimplemented!()
+        self.timestamp
     }
 
     fn block_difficulty(&self) -> U256 {

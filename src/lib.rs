@@ -20,6 +20,8 @@ mod near_backend;
 #[cfg(feature = "contract")]
 mod sdk;
 
+const CHAIN_ID: u64 = 1;
+
 #[cfg(feature = "contract")]
 mod contract {
     use crate::near_backend::Backend;
@@ -45,7 +47,7 @@ mod contract {
     #[no_mangle]
     pub extern "C" fn deploy_code() {
         let input = sdk::read_input();
-        let mut backend = Backend::new(H160::zero());
+        let mut backend = Backend::new(CHAIN_ID, H160::zero());
         let result = runner::Runner::deploy_code(&mut backend, &input);
         sdk::return_output(&result.0);
     }
@@ -60,7 +62,7 @@ mod contract {
     #[no_mangle]
     pub extern "C" fn call() {
         let input = sdk::read_input();
-        let mut backend = Backend::new(H160::zero());
+        let mut backend = Backend::new(CHAIN_ID, H160::zero());
         let result = runner::Runner::call(&mut backend, &input);
         sdk::return_output(&result);
     }
@@ -68,7 +70,7 @@ mod contract {
     #[no_mangle]
     pub extern "C" fn view() {
         let input = sdk::read_input();
-        let mut backend = Backend::new(H160::zero());
+        let mut backend = Backend::new(CHAIN_ID, H160::zero());
         let result = runner::Runner::view(&mut backend, &input);
         sdk::return_output(&result);
     }

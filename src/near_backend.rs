@@ -7,15 +7,22 @@ use crate::backend::{Apply, Basic};
 use primitive_types::{H160, H256, U256};
 
 use crate::sdk;
-use crate::types::{address_to_key, storage_to_key, u256_to_arr, KeyPrefix};
+use crate::types::{
+    address_to_key, bytes_to_hex, log_to_bytes, storage_to_key, u256_to_arr, KeyPrefix,
+};
+use sha3::{Digest, Keccak256};
 
 pub struct Backend {
+    chain_id: U256,
     origin: H160,
 }
 
 impl Backend {
-    pub fn new(origin: H160) -> Self {
-        Self { origin }
+    pub fn new(chain_id: u64, origin: H160) -> Self {
+        Self {
+            chain_id: U256::from(chain_id),
+            origin,
+        }
     }
 
     pub fn set_code(address: &H160, code: &[u8]) {
@@ -62,53 +69,53 @@ impl Backend {
             .unwrap_or_else(H256::default)
     }
 
-    pub fn remove_account(address: &H160) {}
+    pub fn remove_account(_address: &H160) {}
 }
 
 impl crate::backend::Backend for Backend {
     fn gas_left(&self) -> U256 {
-        unimplemented!()
+        U256::max_value()
     }
 
     fn gas_price(&self) -> U256 {
-        unimplemented!()
+        U256::zero()
     }
 
     fn origin(&self) -> H160 {
         self.origin
     }
 
-    fn block_hash(&self, number: U256) -> H256 {
-        unimplemented!()
+    fn block_hash(&self, _number: U256) -> H256 {
+        // There is no access to block hashes from runtime.
+        H256::zero()
     }
 
     fn block_number(&self) -> U256 {
-        unimplemented!()
+        U256::from(sdk::block_index())
     }
 
     fn block_coinbase(&self) -> H160 {
-        unimplemented!()
+        H160::zero()
     }
 
     fn block_timestamp(&self) -> U256 {
-        unimplemented!()
+        U256::from(sdk::block_timestamp())
     }
 
     fn block_difficulty(&self) -> U256 {
-        unimplemented!()
-    }
-
-    fn block_gas_limit(&self) -> U256 {
-        unimplemented!()
-    }
-
-    fn chain_id(&self) -> U256 {
-        // TODO:!!
         U256::zero()
     }
 
+    fn block_gas_limit(&self) -> U256 {
+        U256::zero()
+    }
+
+    fn chain_id(&self) -> U256 {
+        self.chain_id
+    }
+
     fn exists(&self, address: H160) -> bool {
-        unimplemented!()
+        Backend::get_balance(&address) > U256::zero() || Backend::get_code(&address).len() > 0
     }
 
     fn basic(&self, address: H160) -> Basic {
@@ -119,11 +126,11 @@ impl crate::backend::Backend for Backend {
     }
 
     fn code_hash(&self, address: H160) -> H256 {
-        unimplemented!()
+        H256::from_slice(Keccak256::digest(&Backend::get_code(&address)).as_slice())
     }
 
     fn code_size(&self, address: H160) -> usize {
-        unimplemented!()
+        Backend::get_code(&address).len()
     }
 
     fn code(&self, address: H160) -> Vec<u8> {
@@ -178,7 +185,7 @@ impl crate::runner::BackendApply for Backend {
         }
 
         for log in logs {
-            // TODO: deal with logs
+            sdk::log_utf8(&bytes_to_hex(&log_to_bytes(log)).into_bytes());
         }
     }
 }

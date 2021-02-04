@@ -294,7 +294,7 @@ impl Config {
             sstore_revert_under_stipend: true,
             err_on_call_with_more_gas: false,
             empty_considered_exists: false,
-            create_increase_nonce: true,
+            create_increase_nonce: false, // true,
             call_l64_after_gas: true,
             stack_limit: 1024,
             memory_limit: usize::max_value(),

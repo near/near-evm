@@ -1,7 +1,6 @@
-use near_evm::backend::{Apply, Backend, Basic, Log};
-use near_evm::runner::BackendApply;
+use near_evm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
 use primitive_types::{H160, H256, U256};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 pub struct TestBackend {
     pub origin: H160,
@@ -84,10 +83,12 @@ impl Backend for TestBackend {
     }
 
     fn code(&self, address: H160) -> Vec<u8> {
+        println!("Read code {}", address);
         self.codes.get(&address).unwrap_or(&vec![]).clone()
     }
 
     fn storage(&self, address: H160, index: H256) -> H256 {
+        println!("Read storage {} {}", address, index);
         self.storages
             .get(&address)
             .map(|s| s.get(&index).unwrap_or(&H256::zero()).clone())
@@ -95,14 +96,14 @@ impl Backend for TestBackend {
     }
 }
 
-impl BackendApply for TestBackend {
-    fn apply(
-        &mut self,
-        values: Vec<Apply<BTreeMap<H256, H256>>>,
-        _logs: Vec<Log>,
-        _delete_empty: bool,
-    ) {
-        println!("{:?}", values);
+impl ApplyBackend for TestBackend {
+    fn apply<A, I, L>(&mut self, values: A, _logs: L, _delete_empty: bool)
+    where
+        A: IntoIterator<Item = Apply<I>>,
+        I: IntoIterator<Item = (H256, H256)>,
+        L: IntoIterator<Item = Log>,
+    {
+        println!("Apply");
         for value in values {
             match value {
                 Apply::Modify {
@@ -112,6 +113,12 @@ impl BackendApply for TestBackend {
                     storage,
                     reset_storage: _,
                 } => {
+                    println!(
+                        "Address: {:?}, account: {:?}, code: {}",
+                        address,
+                        basic,
+                        code.clone().map(|c| c.len()).unwrap_or(0)
+                    );
                     self.accounts.insert(address, basic);
                     if let Some(code) = code {
                         self.codes.insert(address, code);

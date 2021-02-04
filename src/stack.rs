@@ -726,7 +726,7 @@ impl<'backend, 'config, B: Backend> Handler for StackExecutor<'backend, 'config,
 
         self.transfer(Transfer {
             source: address,
-            target: target,
+            target,
             value: balance,
         })?;
         self.account_mut(address).basic.balance = U256::zero();

@@ -4,11 +4,13 @@ use primitive_types::{H160, U256};
 
 use near_evm::backend::Backend;
 use near_evm::runner::Runner;
-use near_evm::types::{FunctionCallArgs, ViewCallArgs};
+use near_evm::types::{near_account_to_evm_address, FunctionCallArgs, ViewCallArgs};
 
 mod test_backend;
 
+use_contract!(soltest, "tests/build/SolTests.abi");
 use_contract!(cryptozombies, "tests/build/ZombieOwnership.abi");
+use_contract!(bfactory, "tests/build/BFactory.abi");
 
 struct TestRunner {
     backend: test_backend::TestBackend,
@@ -19,6 +21,10 @@ impl TestRunner {
         Self {
             backend: test_backend::TestBackend::new(H160::zero()),
         }
+    }
+
+    pub fn set_origin(&mut self, origin: H160) {
+        self.backend.origin = origin;
     }
 
     pub fn deploy_code(&mut self, code: Vec<u8>) -> H160 {
@@ -71,4 +77,21 @@ fn test_runner_deploy() {
     let (input, _decoder) = cryptozombies::functions::balance_of::call(H160::zero().0);
     let result = runner.view(H160::zero(), address, U256::zero(), input);
     assert_eq!(U256::from_big_endian(&result), U256::from(1));
+}
+
+#[test]
+fn test_balancer() {
+    let mut runner = TestRunner::new();
+    runner.set_origin(near_account_to_evm_address(b"alice"));
+    let address =
+        runner.deploy_code(hex::decode(&include_bytes!("build/BFactory.bin").to_vec()).unwrap());
+    let (input, _) = bfactory::functions::new_b_pool::call();
+    runner.set_origin(H160::zero());
+    let pool_address = runner.call(address, input);
+    // let pool_address = runner.view(H160::zero(), address, U256::zero(), input);
+    println!("{:?}", pool_address);
+    assert_eq!(
+        hex::encode(pool_address),
+        "f55df5ec5c8c64582378dce8eee51ec4af77ccd6"
+    );
 }

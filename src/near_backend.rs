@@ -3,7 +3,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 #[cfg(feature = "std")]
 use std::{collections::BTreeMap, vec::Vec};
 
-use crate::backend::{Apply, Basic};
+use crate::backend::{Apply, ApplyBackend, Basic};
 use primitive_types::{H160, H256, U256};
 
 use crate::sdk;

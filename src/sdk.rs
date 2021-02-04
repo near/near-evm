@@ -1,5 +1,7 @@
 use alloc::{vec, vec::Vec};
 
+use primitive_types::H256;
+
 mod exports {
 
     #[allow(unused)]
@@ -15,7 +17,7 @@ mod exports {
         fn current_account_id(register_id: u64);
         fn signer_account_id(register_id: u64);
         fn signer_account_pk(register_id: u64);
-        fn predecessor_account_id(register_id: u64);
+        pub(crate) fn predecessor_account_id(register_id: u64);
         pub(crate) fn input(register_id: u64);
         // TODO #1903 fn block_height() -> u64;
         pub(crate) fn block_index() -> u64;
@@ -34,6 +36,7 @@ mod exports {
         // ############
         fn random_seed(register_id: u64);
         fn sha256(value_len: u64, value_ptr: u64, register_id: u64);
+        pub(crate) fn keccak256(value_len: u64, value_ptr: u64, register_id: u64);
         // #####################
         // # Miscellaneous API #
         // #####################
@@ -209,5 +212,23 @@ pub fn block_index() -> u64 {
 pub fn log_utf8(bytes: &[u8]) {
     unsafe {
         exports::log_utf8(bytes.len() as u64, bytes.as_ptr() as u64);
+    }
+}
+
+pub fn predecessor_account_id() -> Vec<u8> {
+    unsafe {
+        exports::predecessor_account_id(1);
+        let bytes: Vec<u8> = vec![0u8; exports::register_len(1) as usize];
+        exports::read_register(1, bytes.as_ptr() as *const u64 as u64);
+        bytes
+    }
+}
+
+pub fn keccak(data: &[u8]) -> H256 {
+    unsafe {
+        exports::keccak256(data.len() as u64, data.as_ptr() as u64, 0);
+        let bytes = H256::zero();
+        exports::read_register(1, bytes.0.as_ptr() as *const u64 as u64);
+        bytes
     }
 }

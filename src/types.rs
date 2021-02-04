@@ -3,13 +3,20 @@ use alloc::{string::String, vec, vec::Vec};
 #[cfg(feature = "std")]
 use std::{string::String, vec, vec::Vec};
 
+#[cfg(not(feature = "contract"))]
+use sha3::{Digest, Keccak256};
+
 use borsh::{BorshDeserialize, BorshSerialize};
 use primitive_types::{H160, H256, U256};
 
 use crate::backend::Log;
 
+#[cfg(feature = "contract")]
+use crate::sdk;
+
 pub type RawAddress = [u8; 20];
 pub type RawU256 = [u8; 32];
+pub type RawH256 = [u8; 32];
 
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct FunctionCallArgs {
@@ -23,6 +30,12 @@ pub struct ViewCallArgs {
     pub address: RawAddress,
     pub amount: RawU256,
     pub input: Vec<u8>,
+}
+
+#[derive(BorshSerialize, BorshDeserialize)]
+pub struct GetStorageAtArgs {
+    pub address: RawAddress,
+    pub key: RawH256,
 }
 
 pub enum KeyPrefix {
@@ -73,4 +86,14 @@ pub fn bytes_to_hex(v: &[u8]) -> String {
         result.push(HEX_ALPHABET[(x / 16) as usize] as char);
     }
     result
+}
+
+#[cfg(feature = "contract")]
+pub fn near_account_to_evm_address(addr: &[u8]) -> H160 {
+    H160::from_slice(&sdk::keccak(addr)[12..])
+}
+
+#[cfg(not(feature = "contract"))]
+pub fn near_account_to_evm_address(addr: &[u8]) -> H160 {
+    H160::from_slice(&Keccak256::digest(addr)[12..])
 }

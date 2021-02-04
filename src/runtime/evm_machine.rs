@@ -55,12 +55,14 @@ mod embedded {
 
     static mut MACHINE: Option<Machine> = None;
 
+    #[inline]
     pub fn init_evm_machine(code: Rc<Vec<u8>>, data: Rc<Vec<u8>>) {
         unsafe {
-            MACHINE = Some(Machine::new(code, data, 1024, usize::max_value()));
+            MACHINE = Some(Machine::new(code, data, 1024, usize::MAX));
         }
     }
 
+    #[inline]
     pub fn evm_machine_step() -> Result<(), Capture<ExitReason, Trap>> {
         unsafe {
             match MACHINE {
@@ -79,6 +81,7 @@ mod embedded {
         }
     }
 
+    #[inline]
     pub fn evm_machine_return_value() -> Vec<u8> {
         unsafe {
             match MACHINE {
@@ -88,6 +91,7 @@ mod embedded {
         }
     }
 
+    #[inline]
     pub fn evm_machine_stack_push(value: H256) -> Result<(), ExitError> {
         unsafe {
             match MACHINE {
@@ -97,6 +101,7 @@ mod embedded {
         }
     }
 
+    #[inline]
     pub fn evm_machine_stack_pop() -> Result<H256, ExitError> {
         unsafe {
             match MACHINE {
@@ -106,6 +111,7 @@ mod embedded {
         }
     }
 
+    #[inline]
     pub fn evm_machine_copy(
         memory_offset: U256,
         data_offset: U256,
@@ -122,6 +128,7 @@ mod embedded {
         }
     }
 
+    #[inline]
     pub fn evm_machine_get(offset: usize, size: usize) -> Vec<u8> {
         unsafe {
             match MACHINE {
@@ -131,6 +138,7 @@ mod embedded {
         }
     }
 
+    #[inline]
     pub fn evm_machine_resize(offset: U256, len: U256) -> Result<(), ExitError> {
         unsafe {
             match MACHINE {

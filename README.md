@@ -1,24 +1,21 @@
-# OUTDATED REPO
-
-This repo is outdated.
-The work has been integrated into [nearcore client](https://github.com/near/nearcore/tree/master/runtime/near-evm-runner/src) as part of [EVM precompile](https://github.com/near/NEPs/pull/106).
-
-# Near-evm
+# NEAR EVM
 
 EVM interpreter as a NEAR smart contract.
 
-It uses the EVM interpreter from [parity-ethereum](https://github.com/paritytech/parity-ethereum/).
+It uses the EVM interpreter from [SputnikVM](https://github.com/rust-blockchain/evm).
 
-### Pre-requisites
+### Prerequisites
+
 To develop Rust contracts you would need to:
-* Install [Rustup](https://rustup.rs/):
+
+1. Install [Rustup](https://rustup.rs):
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-* Add wasm target to your toolchain (if you already have installed Rust make sure to switch to `rustup default stable`):
+2. Add a WebAssembly target to your Rust toolchain:
 ```bash
-rustup target add wasm32-unknown-unknown
+rustup target add wasm32-unknown-unknown --toolchain stable
 ```
 
 ### Building
@@ -33,9 +30,10 @@ This will build the contract code in `res/near_evm.wasm`.
 
 Deploy contract on TestNet:
 
-* Make sure you have the newest version of near-shell installed by running:
+* Make sure you have the newest version of the NEAR CLI installed by running:
+
 ```shell
-npm install -g near-shell
+npm install -g near-cli
 ```
 
 * If you are using TestNet, call `near login` (if you are using local node use `NODE_ENV=development` before commands below).
@@ -67,10 +65,12 @@ near deploy --accountId=evm --wasmFile=res/near_evm.wasm
       ```sh
       cd ../.. && ./build.sh`
       ```
+
 2. Run the all tests including integration test
       ```sh
       cargo test --lib`
       ```
+
 3. To run the RPC tests you must [run a local NEAR node](https://docs.near.org/docs/local-setup/local-dev-node):
       1. Check out [`nearcore`](https://github.com/nearprotocol/nearcore) from Github
       2. Compile and run `nearcore`

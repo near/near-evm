@@ -1,16 +1,16 @@
 #[cfg(not(feature = "std"))]
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::vec::Vec;
 #[cfg(feature = "std")]
-use std::{collections::BTreeMap, vec::Vec};
+use std::vec::Vec;
 
-use crate::backend::{Apply, ApplyBackend, Basic};
 use primitive_types::{H160, H256, U256};
+use sha3::{Digest, Keccak256};
 
+use crate::backend::{Apply, ApplyBackend, Basic, Log};
 use crate::sdk;
 use crate::types::{
     address_to_key, bytes_to_hex, log_to_bytes, storage_to_key, u256_to_arr, KeyPrefix,
 };
-use sha3::{Digest, Keccak256};
 
 pub struct Backend {
     chain_id: U256,
@@ -142,13 +142,13 @@ impl crate::backend::Backend for Backend {
     }
 }
 
-impl crate::runner::BackendApply for Backend {
-    fn apply(
-        &mut self,
-        values: Vec<Apply<BTreeMap<H256, H256>>>,
-        logs: Vec<crate::backend::Log>,
-        delete_empty: bool,
-    ) {
+impl ApplyBackend for Backend {
+    fn apply<A, I, L>(&mut self, values: A, logs: L, delete_empty: bool)
+    where
+        A: IntoIterator<Item = Apply<I>>,
+        I: IntoIterator<Item = (H256, H256)>,
+        L: IntoIterator<Item = Log>,
+    {
         for apply in values {
             match apply {
                 Apply::Modify {

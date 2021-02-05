@@ -192,7 +192,6 @@ pub fn swap(state: &mut Machine, n: usize) -> Control {
 #[inline]
 pub fn ret(state: &mut Machine) -> Control {
     pop_u256!(state, start, len);
-    println!("Ret: {} {} {}", start, len, state.memory.len());
     try_or_fail!(state.memory.resize_offset(start, len));
     state.return_range = start..(start + len);
     Control::Exit(ExitSucceed::Returned.into())

@@ -95,9 +95,7 @@ impl<'config> Runtime<'config> {
     }
 
     pub fn return_value(self) -> Vec<u8> {
-        let result = evm_machine_return_value();
-        pop_evm_machine();
-        result
+        evm_machine_return_value()
     }
 
     pub fn exit(&self, exit: ExitReason) {
@@ -146,6 +144,12 @@ impl<'config> Runtime<'config> {
         loop {
             step!(self, handler, return;)
         }
+    }
+}
+
+impl<'config> Drop for Runtime<'config> {
+    fn drop(&mut self) {
+        pop_evm_machine();
     }
 }
 

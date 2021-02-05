@@ -1,16 +1,20 @@
-use crate::evm_core::{Capture, ExitError, ExitFatal, ExitReason, Trap};
-
-#[cfg(feature = "std")]
-use std::{rc::Rc, vec::Vec};
-
 #[cfg(not(feature = "std"))]
-use alloc::{rc::Rc, vec::Vec};
+use alloc::{rc::Rc, vec, vec::Vec};
+#[cfg(feature = "std")]
+use std::{rc::Rc, vec, vec::Vec};
+
 use primitive_types::{H256, U256};
+
+#[cfg(not(feature = "external_evm_machine"))]
+pub use embedded::*;
+#[cfg(feature = "external_evm_machine")]
+pub use sdk::*;
+
+use crate::evm_core::{Capture, ExitError, ExitFatal, ExitReason, Trap};
 
 #[cfg(feature = "external_evm_machine")]
 mod sdk {
     use super::*;
-    use alloc::vec;
 
     extern "C" {}
 
@@ -44,9 +48,6 @@ mod sdk {
         Ok(())
     }
 }
-
-#[cfg(feature = "external_evm_machine")]
-pub use sdk::*;
 
 #[cfg(not(feature = "external_machine"))]
 mod embedded {
@@ -157,6 +158,3 @@ mod embedded {
     }
 
 }
-
-#[cfg(not(feature = "external_evm_machine"))]
-pub use embedded::*;

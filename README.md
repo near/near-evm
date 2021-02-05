@@ -43,9 +43,19 @@ npm install -g near-cli
 near create_account evm --masterAccount=<account you used in near login/test.near for local>
 ```
 
+for *testnet* example (for example basic logged in account: `myaccount.testnet``):
+```shell
+near create_account subname.myaccount.testnet --masterAccount=myaccount.testnet
+```
+
 * Deploy the compiled contract from `res/near_evm.wasm` at the building step:
 ```shell
 near deploy --accountId=evm --wasmFile=res/near_evm.wasm
+```
+
+for `testnet`:
+```shell
+near deploy --accountId=subname.myaccount.testnet --wasmFile=res/near_evm.wasm
 ```
 
 * TODO: hackery to actually deploy your EVM contract
@@ -53,22 +63,22 @@ near deploy --accountId=evm --wasmFile=res/near_evm.wasm
 ### Testing
 
 1. Build the evm contract
-    1. Ensure truffle is installed
+    1. Build the Near EVM contract binary
+      ```sh
+      ./build.sh`
+      ```
+    2. Ensure truffle is installed
       ```sh
       npm i -g truffle
       ```
-    1. Build the test contracts
+    3. Build the test contracts
       ```sh
-      cd src/tests && ./build.sh
-      ```
-    2. Build the Near EVM contract binary
-      ```sh
-      cd ../.. && ./build.sh`
+      cd tests && ./build.sh
       ```
 
 2. Run the all tests including integration test
       ```sh
-      cargo test --lib`
+      cargo test --lib
       ```
 
 3. To run the RPC tests you must [run a local NEAR node](https://docs.near.org/docs/local-setup/local-dev-node):

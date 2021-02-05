@@ -1,3 +1,8 @@
+# OUTDATED REPO
+
+This repo is outdated.
+The work has been integrated into [nearcore client](https://github.com/near/nearcore/tree/master/runtime/near-evm-runner/src) as part of [EVM precompile](https://github.com/near/NEPs/pull/106).
+
 # Near-evm
 
 EVM interpreter as a NEAR smart contract.

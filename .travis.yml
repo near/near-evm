@@ -11,15 +11,13 @@ matrix:
           - export PATH="$HOME/.cargo/bin:$PATH"
           - npm i -g truffle
         before_script:
-          - cd ./src/tests && ./build.sh && cd ../..
+          - cd ./tests && ./build.sh && cd ../..
         script:
-          - cargo test --lib
+          - cargo test -- --test-threads=1
 
       - language: rust
-        rust: stable
+        rust: nightly
         before_install:
-          - rustup target add wasm32-unknown-unknown --toolchain stable
-        install:
-          - cargo +stable build --target wasm32-unknown-unknown --release # ./build.sh needs target/wasm32-unknown-unknown/release/near_evm.wasm
+          - rustup target add wasm32-unknown-unknown --toolchain nightly
         script:
           - ./build.sh

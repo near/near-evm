@@ -85,9 +85,8 @@ impl<'config> Runtime<'config> {
         context: Context,
         config: &'config Config,
     ) -> Self {
-        init_evm_machine(code, data);
+        push_evm_machine(code, data);
         Self {
-            // machine: Machine::new(code, data, config.stack_limit, config.memory_limit),
             status: Ok(()),
             return_data_buffer: Vec::new(),
             context,
@@ -95,13 +94,10 @@ impl<'config> Runtime<'config> {
         }
     }
 
-    // /// Get a reference to the machine.
-    // pub fn machine(&self) -> &Machine {
-    //     &self.machine
-    // }
-
-    pub fn return_value(&self) -> Vec<u8> {
-        evm_machine_return_value()
+    pub fn return_value(self) -> Vec<u8> {
+        let result = evm_machine_return_value();
+        pop_evm_machine();
+        result
     }
 
     pub fn exit(&self, exit: ExitReason) {

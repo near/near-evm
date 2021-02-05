@@ -65,8 +65,6 @@ fn test_runner_deploy() {
     let mut runner = TestRunner::new();
     let address = runner
         .deploy_code(hex::decode(&include_bytes!("build/ZombieOwnership.bin").to_vec()).unwrap());
-    println!("{:?}", address);
-    println!("{:?}", runner.backend.code(address));
     assert!(runner.backend.code(address).len() > 0);
     let (input, _decoder) = cryptozombies::functions::balance_of::call(address.0);
     let result = runner.view(H160::zero(), address, U256::zero(), input);
@@ -86,10 +84,13 @@ fn test_balancer() {
     let address =
         runner.deploy_code(hex::decode(&include_bytes!("build/BFactory.bin").to_vec()).unwrap());
     let (input, _) = bfactory::functions::new_b_pool::call();
-    runner.set_origin(H160::zero());
-    let pool_address = runner.call(address, input);
-    // let pool_address = runner.view(H160::zero(), address, U256::zero(), input);
-    println!("{:?}", pool_address);
+    let pool_address = bfactory::functions::new_b_pool::decode_output(&runner.view(
+        H160::zero(),
+        address,
+        U256::zero(),
+        input,
+    ))
+    .unwrap();
     assert_eq!(
         hex::encode(pool_address),
         "f55df5ec5c8c64582378dce8eee51ec4af77ccd6"

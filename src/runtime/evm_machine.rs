@@ -14,7 +14,8 @@ mod sdk {
 
     extern "C" {}
 
-    pub fn init_evm_machine(code: Rc<Vec<u8>>, data: Rc<Vec<u8>>) {}
+    pub fn push_evm_machine(code: Rc<Vec<u8>>, data: Rc<Vec<u8>>) {}
+    pub fn pop_evm_machine() {}
     pub fn evm_machine_step() -> Result<(), Capture<ExitReason, Trap>> {
         Ok(())
     }
@@ -53,19 +54,26 @@ mod embedded {
 
     use super::*;
 
-    static mut MACHINE: Option<Machine> = None;
+    static mut MACHINE: Vec<Machine> = vec![];
 
     #[inline]
-    pub fn init_evm_machine(code: Rc<Vec<u8>>, data: Rc<Vec<u8>>) {
+    pub fn push_evm_machine(code: Rc<Vec<u8>>, data: Rc<Vec<u8>>) {
         unsafe {
-            MACHINE = Some(Machine::new(code, data, 1024, usize::MAX));
+            MACHINE.push(Machine::new(code, data, 1024, usize::MAX));
+        }
+    }
+
+    #[inline]
+    pub fn pop_evm_machine() {
+        unsafe {
+            MACHINE.pop();
         }
     }
 
     #[inline]
     pub fn evm_machine_step() -> Result<(), Capture<ExitReason, Trap>> {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref mut x) => x.step(),
                 None => panic!(),
             }
@@ -74,7 +82,7 @@ mod embedded {
 
     pub fn evm_machine_exit(exit: ExitReason) {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref mut x) => x.exit(exit),
                 None => panic!(),
             }
@@ -84,7 +92,7 @@ mod embedded {
     #[inline]
     pub fn evm_machine_return_value() -> Vec<u8> {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref x) => x.return_value(),
                 None => panic!(),
             }
@@ -94,7 +102,7 @@ mod embedded {
     #[inline]
     pub fn evm_machine_stack_push(value: H256) -> Result<(), ExitError> {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref mut x) => x.stack_mut().push(value),
                 None => panic!(),
             }
@@ -104,7 +112,7 @@ mod embedded {
     #[inline]
     pub fn evm_machine_stack_pop() -> Result<H256, ExitError> {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref mut x) => x.stack_mut().pop(),
                 None => panic!(),
             }
@@ -119,7 +127,7 @@ mod embedded {
         data: &[u8],
     ) -> Result<(), ExitFatal> {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref mut x) => x
                     .memory_mut()
                     .copy_large(memory_offset, data_offset, len, data),
@@ -131,7 +139,7 @@ mod embedded {
     #[inline]
     pub fn evm_machine_get(offset: usize, size: usize) -> Vec<u8> {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref x) => x.memory().get(offset, size),
                 None => panic!(),
             }
@@ -141,7 +149,7 @@ mod embedded {
     #[inline]
     pub fn evm_machine_resize(offset: U256, len: U256) -> Result<(), ExitError> {
         unsafe {
-            match MACHINE {
+            match MACHINE.last_mut() {
                 Some(ref mut x) => x.memory_mut().resize_offset(offset, len),
                 None => panic!(),
             }

@@ -154,7 +154,6 @@ pub fn push(state: &mut Machine, n: usize, position: usize) -> Control {
     let end = min(position + 1 + n, state.code.len());
     let val = U256::from(&state.code[(position + 1)..end]);
 
-    println!("Push: {}", val);
     push_u256!(state, val);
     Control::Continue(1 + n)
 }

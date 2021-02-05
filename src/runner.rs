@@ -38,7 +38,6 @@ impl Runner {
         let value = U256::zero();
         Self::execute(backend, value, true, |executor| {
             let address = executor.create_address(CreateScheme::Legacy { caller: origin });
-            println!("Origin: {}, address: {}", origin, address);
             (
                 executor.transact_create(origin, value, Vec::from(input)),
                 address,

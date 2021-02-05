@@ -24,11 +24,11 @@ impl TestBackend {
 
 impl Backend for TestBackend {
     fn gas_left(&self) -> U256 {
-        unimplemented!()
+        U256::zero()
     }
 
     fn gas_price(&self) -> U256 {
-        unimplemented!()
+        U256::zero()
     }
 
     fn origin(&self) -> H160 {

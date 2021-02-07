@@ -1,25 +1,25 @@
 use crate::runtime::{ExitFatal, Handler, Runtime};
 
 /// Interrupt resolution.
-pub enum Resolve<'a, 'config, H: Handler> {
+pub enum Resolve<'a, 'b, 'config, H: Handler> {
     /// Create interrupt resolution.
-    Create(H::CreateInterrupt, ResolveCreate<'a, 'config>),
+    Create(H::CreateInterrupt, ResolveCreate<'a, 'b, 'config>),
     /// Call interrupt resolution.
-    Call(H::CallInterrupt, ResolveCall<'a, 'config>),
+    Call(H::CallInterrupt, ResolveCall<'a, 'b, 'config>),
 }
 
 /// Create interrupt resolution.
-pub struct ResolveCreate<'a, 'config> {
-    runtime: &'a mut Runtime<'config>,
+pub struct ResolveCreate<'a, 'b, 'config> {
+    runtime: &'a mut Runtime<'b, 'config>,
 }
 
-impl<'a, 'config> ResolveCreate<'a, 'config> {
-    pub(crate) fn new(runtime: &'a mut Runtime<'config>) -> Self {
+impl<'a, 'b, 'config> ResolveCreate<'a, 'b, 'config> {
+    pub(crate) fn new(runtime: &'a mut Runtime<'b, 'config>) -> Self {
         Self { runtime }
     }
 }
 
-impl<'a, 'config> Drop for ResolveCreate<'a, 'config> {
+impl<'a, 'b, 'config> Drop for ResolveCreate<'a, 'b, 'config> {
     fn drop(&mut self) {
         self.runtime.status = Err(ExitFatal::UnhandledInterrupt.into());
         self.runtime.exit(ExitFatal::UnhandledInterrupt.into());
@@ -27,17 +27,17 @@ impl<'a, 'config> Drop for ResolveCreate<'a, 'config> {
 }
 
 /// Call interrupt resolution.
-pub struct ResolveCall<'a, 'config> {
-    runtime: &'a mut Runtime<'config>,
+pub struct ResolveCall<'a, 'b, 'config> {
+    runtime: &'a mut Runtime<'b, 'config>,
 }
 
-impl<'a, 'config> ResolveCall<'a, 'config> {
-    pub(crate) fn new(runtime: &'a mut Runtime<'config>) -> Self {
+impl<'a, 'b, 'config> ResolveCall<'a, 'b, 'config> {
+    pub(crate) fn new(runtime: &'a mut Runtime<'b, 'config>) -> Self {
         Self { runtime }
     }
 }
 
-impl<'a, 'config> Drop for ResolveCall<'a, 'config> {
+impl<'a, 'b, 'config> Drop for ResolveCall<'a, 'b, 'config> {
     fn drop(&mut self) {
         self.runtime.status = Err(ExitFatal::UnhandledInterrupt.into());
         self.runtime.exit(ExitFatal::UnhandledInterrupt.into());

@@ -21,7 +21,12 @@ impl Runner {
         F: FnOnce(&mut StackExecutor<B>) -> (ExitReason, R),
     {
         let config = Config::istanbul();
-        let mut executor = StackExecutor::new_with_precompile(backend, &config, precompiles);
+        #[cfg(feature = "external_machine")]
+        let machine = crate::runtime::evm_machine::SdkMachine {};
+        #[cfg(not(feature = "external_machine"))]
+        let machine = crate::runtime::evm_machine::EmbeddedMachine::new();
+        let mut executor =
+            StackExecutor::new_with_precompile(backend, &machine, &config, precompiles);
         let (_reason, return_value) = f(&mut executor);
         let (values, logs) = executor.deconstruct();
         if should_commit {

@@ -8,14 +8,14 @@ extern crate alloc;
 
 mod context;
 mod eval;
-mod evm_machine;
+pub mod evm_machine;
 mod handler;
 mod interrupt;
 
 pub use crate::evm_core::*;
 
 pub use crate::runtime::context::{CallScheme, Context, CreateScheme};
-use crate::runtime::evm_machine::*;
+pub use crate::runtime::evm_machine::Machine;
 pub use crate::runtime::handler::{Handler, Transfer};
 pub use crate::runtime::interrupt::{Resolve, ResolveCall, ResolveCreate};
 
@@ -34,7 +34,7 @@ macro_rules! step {
 		}
 
 
-		match evm_machine_step() {
+		match $self.machine.step() {
 			Ok(()) => $($ok)?(()),
 			Err(Capture::Exit(e)) => {
 				$self.status = Err(e.clone());
@@ -55,7 +55,7 @@ macro_rules! step {
 						$return $($err)*(Capture::Trap(Resolve::Create(interrupt, resolve)))
 					},
 					eval::Control::Exit(exit) => {
-					    evm_machine_exit(exit.clone().into());
+					    $self.machine.exit(exit.clone().into());
 						$self.status = Err(exit.clone());
 						#[allow(unused_parens)]
 						$return $($err)*(Capture::Exit(exit))
@@ -69,24 +69,26 @@ macro_rules! step {
 /// EVM runtime.
 ///
 /// The runtime wraps an EVM `Machine` with support of return data and context.
-pub struct Runtime<'config> {
-    // machine: Machine,
+pub struct Runtime<'a, 'config> {
+    machine: &'a dyn Machine,
     status: Result<(), ExitReason>,
     return_data_buffer: Vec<u8>,
     context: Context,
     _config: &'config Config,
 }
 
-impl<'config> Runtime<'config> {
+impl<'a, 'config> Runtime<'a, 'config> {
     /// Create a new runtime with given code and data.
     pub fn new(
+        machine: &'a dyn Machine,
         code: Rc<Vec<u8>>,
         data: Rc<Vec<u8>>,
         context: Context,
         config: &'config Config,
     ) -> Self {
-        push_evm_machine(code, data);
+        machine.push_evm_machine(code, data);
         Self {
+            machine,
             status: Ok(()),
             return_data_buffer: Vec::new(),
             context,
@@ -94,62 +96,70 @@ impl<'config> Runtime<'config> {
         }
     }
 
+    #[inline]
     pub fn return_value(self) -> Vec<u8> {
-        evm_machine_return_value()
+        self.machine.return_value()
     }
 
+    #[inline]
     pub fn exit(&self, exit: ExitReason) {
-        evm_machine_exit(exit)
+        self.machine.exit(exit)
     }
 
+    #[inline]
     pub fn memory_copy(
-        &self,
+        &mut self,
         memory_offset: U256,
         data_offset: U256,
         len: U256,
         data: &[u8],
     ) -> Result<(), ExitFatal> {
-        evm_machine_copy(memory_offset, data_offset, len, data)
+        self.machine
+            .memory_copy(memory_offset, data_offset, len, data)
     }
 
-    pub fn get_memory(&self, offset: usize, size: usize) -> Vec<u8> {
-        evm_machine_get(offset, size)
+    #[inline]
+    pub fn get_memory(&mut self, offset: usize, size: usize) -> Vec<u8> {
+        self.machine.memory_get(offset, size)
     }
 
-    pub fn resize_offset(&self, offset: U256, len: U256) -> Result<(), ExitError> {
-        evm_machine_resize(offset, len)
+    #[inline]
+    pub fn resize_offset(&mut self, offset: U256, len: U256) -> Result<(), ExitError> {
+        self.machine.memory_resize(offset, len)
     }
 
-    pub fn stack_pop(&self) -> Result<H256, ExitError> {
-        evm_machine_stack_pop()
+    #[inline]
+    pub fn stack_pop(&mut self) -> Result<H256, ExitError> {
+        self.machine.stack_pop()
     }
 
-    pub fn stack_push(&self, value: H256) -> Result<(), ExitError> {
-        evm_machine_stack_push(value)
+    #[inline]
+    pub fn stack_push(&mut self, value: H256) -> Result<(), ExitError> {
+        self.machine.stack_push(value)
     }
 
     /// Step the runtime.
-    pub fn step<'a, H: Handler>(
-        &'a mut self,
+    pub fn step<'b, H: Handler>(
+        &'b mut self,
         handler: &mut H,
-    ) -> Result<(), Capture<ExitReason, Resolve<'a, 'config, H>>> {
+    ) -> Result<(), Capture<ExitReason, Resolve<'b, 'a, 'config, H>>> {
         step!(self, handler, return Err; Ok)
     }
 
     /// Loop stepping the runtime until it stops.
-    pub fn run<'a, H: Handler>(
-        &'a mut self,
+    pub fn run<'b, H: Handler>(
+        &'b mut self,
         handler: &mut H,
-    ) -> Capture<ExitReason, Resolve<'a, 'config, H>> {
+    ) -> Capture<ExitReason, Resolve<'b, 'a, 'config, H>> {
         loop {
             step!(self, handler, return;)
         }
     }
 }
 
-impl<'config> Drop for Runtime<'config> {
+impl<'a, 'config> Drop for Runtime<'a, 'config> {
     fn drop(&mut self) {
-        pop_evm_machine();
+        self.machine.pop_evm_machine();
     }
 }
 

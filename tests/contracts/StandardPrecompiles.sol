@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.7.0;
+pragma solidity >=0.4.2;
 
 //import "hardhat/console.sol";
 
 contract StandardPrecompiles {
-  constructor() payable {
+  constructor() public payable {
     //console.log("Deploying StandardPrecompiles");
   }
 

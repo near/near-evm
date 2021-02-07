@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity >=0.5.8;
 
 contract ExposesBalance {
   function balance() public view returns (uint256) {

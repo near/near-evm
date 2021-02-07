@@ -140,7 +140,10 @@ pub fn returndatacopy<H: Handler>(runtime: &mut Runtime) -> Control<H> {
         return Control::Exit(ExitError::OutOfOffset.into());
     }
 
-    match runtime.memory_copy(memory_offset, data_offset, len, &runtime.return_data_buffer) {
+    match runtime
+        .machine
+        .memory_copy(memory_offset, data_offset, len, &runtime.return_data_buffer)
+    {
         Ok(()) => Control::Continue,
         Err(e) => Control::Exit(e.into()),
     }
@@ -384,7 +387,7 @@ pub fn call<'config, H: Handler>(
 
             match reason {
                 ExitReason::Succeed(_) => {
-                    match runtime.memory_copy(
+                    match runtime.machine.memory_copy(
                         out_offset,
                         U256::zero(),
                         target_len,
@@ -403,7 +406,7 @@ pub fn call<'config, H: Handler>(
                 ExitReason::Revert(_) => {
                     push_u256!(runtime, U256::zero());
 
-                    let _ = runtime.memory_copy(
+                    let _ = runtime.machine.memory_copy(
                         out_offset,
                         U256::zero(),
                         target_len,

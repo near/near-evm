@@ -19,6 +19,7 @@ use primitive_types::{H160, H256, U256};
 use sha3::{Digest, Keccak256};
 
 use crate::backend::{Apply, Backend, Basic, Log};
+use crate::runtime::Machine;
 use crate::runtime::{
     Capture, Config, Context, CreateScheme, ExitError, ExitReason, ExitSucceed, ExternalOpcode,
     Handler, Opcode, Runtime, Stack, Transfer,
@@ -53,22 +54,25 @@ pub struct StackSubstate {
 }
 
 /// Stack-based executor.
-pub struct StackExecutor<'backend, 'config, B> {
+pub struct StackExecutor<'backend, 'machine, 'config, B> {
     backend: &'backend B,
+    machine: &'machine dyn Machine,
     config: &'config Config,
     precompile: fn(H160, &[u8], &Context) -> Option<Result<(ExitSucceed, Vec<u8>), ExitError>>,
     substates: Vec<StackSubstate>,
 }
 
-impl<'backend, 'config, B: Backend> StackExecutor<'backend, 'config, B> {
+impl<'backend, 'machine, 'config, B: Backend> StackExecutor<'backend, 'machine, 'config, B> {
     /// Create a new stack-based executor with given precompiles.
     pub fn new_with_precompile(
         backend: &'backend B,
+        machine: &'machine dyn Machine,
         config: &'config Config,
         precompile: fn(H160, &[u8], &Context) -> Option<Result<(ExitSucceed, Vec<u8>), ExitError>>,
     ) -> Self {
         Self {
             backend,
+            machine,
             config,
             precompile,
             substates: vec![StackSubstate {
@@ -388,7 +392,7 @@ impl<'backend, 'config, B: Backend> StackExecutor<'backend, 'config, B> {
 
         {
             if let Some(code) = self.account_mut(address).code.as_ref() {
-                if code.len() != 0 {
+                if !code.is_empty() {
                     let _ = self.exit_substate(StackExitKind::Failed);
                     return Capture::Exit((ExitError::CreateCollision.into(), None, Vec::new()));
                 }
@@ -396,7 +400,7 @@ impl<'backend, 'config, B: Backend> StackExecutor<'backend, 'config, B> {
                 let code = self.backend.code(address);
                 self.account_mut(address).code = Some(code.clone());
 
-                if code.len() != 0 {
+                if !code.is_empty() {
                     let _ = self.exit_substate(StackExitKind::Failed);
                     return Capture::Exit((ExitError::CreateCollision.into(), None, Vec::new()));
                 }
@@ -434,6 +438,7 @@ impl<'backend, 'config, B: Backend> StackExecutor<'backend, 'config, B> {
         }
 
         let mut runtime = Runtime::new(
+            self.machine,
             Rc::new(init_code),
             Rc::new(Vec::new()),
             context,
@@ -520,7 +525,13 @@ impl<'backend, 'config, B: Backend> StackExecutor<'backend, 'config, B> {
             };
         }
 
-        let mut runtime = Runtime::new(Rc::new(code), Rc::new(input), context, self.config);
+        let mut runtime = Runtime::new(
+            self.machine,
+            Rc::new(code),
+            Rc::new(input),
+            context,
+            self.config,
+        );
 
         let reason = self.execute(&mut runtime);
 
@@ -545,7 +556,9 @@ impl<'backend, 'config, B: Backend> StackExecutor<'backend, 'config, B> {
     }
 }
 
-impl<'backend, 'config, B: Backend> Handler for StackExecutor<'backend, 'config, B> {
+impl<'backend, 'machine, 'config, B: Backend> Handler
+    for StackExecutor<'backend, 'machine, 'config, B>
+{
     type CreateInterrupt = Infallible;
     type CreateFeedback = Infallible;
     type CallInterrupt = Infallible;

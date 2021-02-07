@@ -1,4 +1,4 @@
-pragma solidity ^0.5.8;
+pragma solidity >=0.5.8;
 
 contract Create2Factory {
     function deploy(bytes32 _salt, bytes memory _contractBytecode) public returns (address payable addr) {

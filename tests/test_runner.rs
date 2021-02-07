@@ -11,6 +11,7 @@ mod test_backend;
 use_contract!(soltest, "tests/build/SolTests.abi");
 use_contract!(cryptozombies, "tests/build/ZombieOwnership.abi");
 use_contract!(bfactory, "tests/build/BFactory.abi");
+use_contract!(ttoken, "tests/build/TToken.abi");
 
 struct TestRunner {
     backend: test_backend::TestBackend,
@@ -70,11 +71,31 @@ fn test_runner_deploy() {
     let result = runner.view(H160::zero(), address, U256::zero(), input);
     assert_eq!(U256::from_big_endian(&result), U256::zero());
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call("test");
-    let result = runner.call(address, input);
-    println!("{:?}", result);
+    let _ = runner.call(address, input);
     let (input, _decoder) = cryptozombies::functions::balance_of::call(H160::zero().0);
     let result = runner.view(H160::zero(), address, U256::zero(), input);
     assert_eq!(U256::from_big_endian(&result), U256::from(1));
+}
+
+#[test]
+fn test_ttoken() {
+    let mut runner = TestRunner::new();
+    let alice_addr = near_account_to_evm_address(b"alice");
+    runner.set_origin(alice_addr);
+    let input = ttoken::constructor(
+        hex::decode(&include_bytes!("build/TToken.bin").to_vec()).unwrap(),
+        "XYZ",
+        "XYZ",
+        18,
+    );
+    let address = runner.deploy_code(input);
+    let (input, _) = ttoken::functions::mint::call(&alice_addr.0, 5_000_000);
+    let _ = runner.call(address, input);
+    let (input, _) = ttoken::functions::transfer::call(&address.0, 1_000);
+    let _ = runner.call(address, input);
+    let (input, _) = ttoken::functions::balance_of::call(&alice_addr.0);
+    let result = runner.view(address, address, U256::zero(), input);
+    assert_eq!(U256::from_big_endian(&result), U256::from(4_999_000));
 }
 
 #[test]

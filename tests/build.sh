@@ -7,6 +7,7 @@ contracts=(
     "SelfDestruct"
     "ConstructorRevert"
     "PrecompiledFunction"
+    "TToken"
 )
 
 truffle compile || exit 1

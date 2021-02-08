@@ -1,4 +1,5 @@
 use near_evm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
+use near_evm::types::{bytes_to_hex, log_to_bytes};
 use primitive_types::{H160, H256, U256};
 use std::collections::HashMap;
 
@@ -8,6 +9,7 @@ pub struct TestBackend {
     pub accounts: HashMap<H160, Basic>,
     pub codes: HashMap<H160, Vec<u8>>,
     pub storages: HashMap<H160, HashMap<H256, H256>>,
+    pub logs: Vec<Vec<u8>>,
 }
 
 impl TestBackend {
@@ -18,6 +20,7 @@ impl TestBackend {
             accounts: Default::default(),
             codes: Default::default(),
             storages: Default::default(),
+            logs: Default::default(),
         }
     }
 }
@@ -97,7 +100,7 @@ impl Backend for TestBackend {
 }
 
 impl ApplyBackend for TestBackend {
-    fn apply<A, I, L>(&mut self, values: A, _logs: L, _delete_empty: bool)
+    fn apply<A, I, L>(&mut self, values: A, logs: L, _delete_empty: bool)
     where
         A: IntoIterator<Item = Apply<I>>,
         I: IntoIterator<Item = (H256, H256)>,
@@ -130,6 +133,10 @@ impl ApplyBackend for TestBackend {
                 }
                 Apply::Delete { address: _ } => {}
             }
+        }
+        for log in logs {
+            self.logs
+                .push(bytes_to_hex(&log_to_bytes(log)).into_bytes());
         }
     }
 }

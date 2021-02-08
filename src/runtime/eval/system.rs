@@ -12,7 +12,6 @@ use alloc::vec::Vec;
 
 use core::cmp::min;
 use primitive_types::{H256, U256};
-use sha3::{Digest, Keccak256};
 
 pub fn sha3<H: Handler>(runtime: &mut Runtime) -> Control<H> {
     pop_u256!(runtime, from, len);
@@ -27,8 +26,8 @@ pub fn sha3<H: Handler>(runtime: &mut Runtime) -> Control<H> {
         runtime.get_memory(from, len)
     };
 
-    let ret = Keccak256::digest(data.as_slice());
-    push!(runtime, H256::from_slice(ret.as_slice()));
+    let ret = crate::types::keccak(data.as_slice());
+    push!(runtime, ret);
 
     Control::Continue
 }
@@ -140,7 +139,10 @@ pub fn returndatacopy<H: Handler>(runtime: &mut Runtime) -> Control<H> {
         return Control::Exit(ExitError::OutOfOffset.into());
     }
 
-    match runtime.memory_copy(memory_offset, data_offset, len, &runtime.return_data_buffer) {
+    match runtime
+        .machine
+        .memory_copy(memory_offset, data_offset, len, &runtime.return_data_buffer)
+    {
         Ok(()) => Control::Continue,
         Err(e) => Control::Exit(e.into()),
     }
@@ -256,7 +258,7 @@ pub fn create<H: Handler>(runtime: &mut Runtime, is_create2: bool, handler: &mut
 
     let scheme = if is_create2 {
         pop!(runtime, salt);
-        let code_hash = H256::from_slice(Keccak256::digest(&code).as_slice());
+        let code_hash = crate::types::keccak(&code);
         CreateScheme::Create2 {
             caller: runtime.context.address,
             salt,
@@ -384,7 +386,7 @@ pub fn call<'config, H: Handler>(
 
             match reason {
                 ExitReason::Succeed(_) => {
-                    match runtime.memory_copy(
+                    match runtime.machine.memory_copy(
                         out_offset,
                         U256::zero(),
                         target_len,
@@ -403,7 +405,7 @@ pub fn call<'config, H: Handler>(
                 ExitReason::Revert(_) => {
                     push_u256!(runtime, U256::zero());
 
-                    let _ = runtime.memory_copy(
+                    let _ = runtime.machine.memory_copy(
                         out_offset,
                         U256::zero(),
                         target_len,

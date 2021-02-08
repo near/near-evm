@@ -28,8 +28,8 @@ external_evm_machine = []
 [dependencies]
 wee_alloc = { version = "0.4.5", default-features = false }
 borsh = { version = "0.8.1", default-features = false }
-primitive-types = { version = "0.7.0", default-features = false, features = ["rlp"] }
-rlp = { version = "0.4", default-features = false }
+primitive-types = { version = "0.8.0", default-features = false, features = ["rlp"] }
+rlp = { version = "0.5", default-features = false }
 sha3 = { version = "0.8", default-features = false }
 
 [dev-dependencies]

@@ -11,9 +11,9 @@ matrix:
           - export PATH="$HOME/.cargo/bin:$PATH"
           - npm i -g truffle
         before_script:
-          - cd ./tests && ./build.sh && cd ../..
+          - cd ./tests && ./build.sh && cd ..
         script:
-          - cargo test -- --test-threads=1
+          - cargo test
 
       - language: rust
         rust: nightly

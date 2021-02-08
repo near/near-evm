@@ -1,4 +1,5 @@
-pragma solidity ^0.7.0;
+pragma solidity >=0.4.2;
+
 contract Loop {
     function run() public payable returns(uint) {
         uint counter = 0;

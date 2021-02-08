@@ -15,22 +15,32 @@ use crate::types::{FunctionCallArgs, ViewCallArgs};
 pub struct Runner {}
 
 impl Runner {
-    pub fn execute<B, F, R>(backend: &mut B, _value: U256, should_commit: bool, f: F) -> R
+    pub fn execute<B, F, R>(
+        backend: &mut B,
+        _value: U256,
+        should_commit: bool,
+        f: F,
+    ) -> (ExitReason, R)
     where
         B: ApplyBackend + Backend,
         F: FnOnce(&mut StackExecutor<B>) -> (ExitReason, R),
     {
         let config = Config::istanbul();
-        let mut executor = StackExecutor::new_with_precompile(backend, &config, precompiles);
-        let (_reason, return_value) = f(&mut executor);
+        #[cfg(feature = "external_machine")]
+        let machine = crate::runtime::evm_machine::SdkMachine {};
+        #[cfg(not(feature = "external_machine"))]
+        let machine = crate::runtime::evm_machine::EmbeddedMachine::new();
+        let mut executor =
+            StackExecutor::new_with_precompile(backend, &machine, &config, precompiles);
+        let (reason, return_value) = f(&mut executor);
         let (values, logs) = executor.deconstruct();
         if should_commit {
             backend.apply(values, logs, true);
         }
-        return_value
+        (reason, return_value)
     }
 
-    pub fn deploy_code<B>(backend: &mut B, input: &[u8]) -> H160
+    pub fn deploy_code<B>(backend: &mut B, input: &[u8]) -> (ExitReason, H160)
     where
         B: ApplyBackend + Backend,
     {
@@ -45,7 +55,7 @@ impl Runner {
         })
     }
 
-    pub fn call<B>(backend: &mut B, input: &[u8]) -> Vec<u8>
+    pub fn call<B>(backend: &mut B, input: &[u8]) -> (ExitReason, Vec<u8>)
     where
         B: ApplyBackend + Backend,
     {
@@ -57,11 +67,10 @@ impl Runner {
         })
     }
 
-    pub fn view<B>(backend: &mut B, input: &[u8]) -> Vec<u8>
+    pub fn view<B>(backend: &mut B, args: ViewCallArgs) -> (ExitReason, Vec<u8>)
     where
         B: ApplyBackend + Backend,
     {
-        let args = ViewCallArgs::try_from_slice(&input).unwrap();
         let value = U256::from_big_endian(&args.amount);
         Self::execute(backend, value, false, |executor| {
             executor.transact_call(

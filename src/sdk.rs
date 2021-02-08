@@ -42,7 +42,7 @@ mod exports {
         // #####################
         pub(crate) fn value_return(value_len: u64, value_ptr: u64);
         fn panic();
-        fn panic_utf8(len: u64, ptr: u64);
+        pub(crate) fn panic_utf8(len: u64, ptr: u64);
         pub(crate) fn log_utf8(len: u64, ptr: u64);
         fn log_utf16(len: u64, ptr: u64);
         fn abort(msg_ptr: u32, filename_ptr: u32, line: u32, col: u32);
@@ -224,11 +224,19 @@ pub fn predecessor_account_id() -> Vec<u8> {
     }
 }
 
+/// Calls environment keccak256 on given data.
 pub fn keccak(data: &[u8]) -> H256 {
     unsafe {
-        exports::keccak256(data.len() as u64, data.as_ptr() as u64, 0);
+        exports::keccak256(data.len() as u64, data.as_ptr() as u64, 1);
         let bytes = H256::zero();
         exports::read_register(1, bytes.0.as_ptr() as *const u64 as u64);
         bytes
     }
+}
+
+/// Calls environment panic with data encoded in hex as panic message.
+pub fn panic_hex(data: &[u8]) -> ! {
+    let message = crate::types::bytes_to_hex(data).into_bytes();
+    unsafe { exports::panic_utf8(message.len() as _, message.as_ptr() as _) }
+    unreachable!()
 }

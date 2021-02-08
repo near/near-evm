@@ -4,7 +4,6 @@ use alloc::vec::Vec;
 use std::vec::Vec;
 
 use primitive_types::{H160, H256, U256};
-use sha3::{Digest, Keccak256};
 
 use crate::backend::{Apply, ApplyBackend, Basic, Log};
 use crate::sdk;
@@ -126,7 +125,7 @@ impl crate::backend::Backend for Backend {
     }
 
     fn code_hash(&self, address: H160) -> H256 {
-        H256::from_slice(Keccak256::digest(&Backend::get_code(&address)).as_slice())
+        crate::types::keccak(&Backend::get_code(&address))
     }
 
     fn code_size(&self, address: H160) -> usize {

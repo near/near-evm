@@ -62,6 +62,21 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "testInvalidEcrecover",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "testRipemd160",
     "outputs": [
       {

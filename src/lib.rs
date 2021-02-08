@@ -27,6 +27,7 @@ mod contract {
     use crate::near_backend::Backend;
 
     use super::*;
+    use crate::evm_core::ExitReason;
     use crate::types::{near_account_to_evm_address, u256_to_arr, GetStorageAtArgs};
     use primitive_types::{H160, H256};
 
@@ -52,20 +53,28 @@ mod contract {
         near_account_to_evm_address(&sdk::predecessor_account_id())
     }
 
+    fn process_exit_reason(reason: ExitReason, return_value: &[u8]) {
+        match reason {
+            ExitReason::Succeed(_) => sdk::return_output(return_value),
+            ExitReason::Revert(_) => sdk::panic_hex(&return_value),
+            _ => unreachable!(),
+        }
+    }
+
     #[no_mangle]
     pub extern "C" fn deploy_code() {
         let input = sdk::read_input();
         let mut backend = Backend::new(CHAIN_ID, predecessor_address());
-        let result = runner::Runner::deploy_code(&mut backend, &input);
-        sdk::return_output(&result.0);
+        let (reason, return_value) = runner::Runner::deploy_code(&mut backend, &input);
+        process_exit_reason(reason, &return_value.0);
     }
 
     #[no_mangle]
     pub extern "C" fn call() {
         let input = sdk::read_input();
         let mut backend = Backend::new(CHAIN_ID, predecessor_address());
-        let result = runner::Runner::call(&mut backend, &input);
-        sdk::return_output(&result);
+        let (reason, return_value) = runner::Runner::call(&mut backend, &input);
+        process_exit_reason(reason, &return_value);
     }
 
     // TODO: raw_call
@@ -75,9 +84,10 @@ mod contract {
     #[no_mangle]
     pub extern "C" fn view() {
         let input = sdk::read_input();
-        let mut backend = Backend::new(CHAIN_ID, H160::zero());
-        let result = runner::Runner::view(&mut backend, &input);
-        sdk::return_output(&result);
+        let args = crate::types::ViewCallArgs::try_from_slice(&input).unwrap();
+        let mut backend = Backend::new(CHAIN_ID, H160::from_slice(&args.sender));
+        let (reason, return_value) = runner::Runner::view(&mut backend, args);
+        process_exit_reason(reason, &return_value);
     }
 
     #[no_mangle]

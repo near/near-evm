@@ -90,13 +90,19 @@ pub fn bytes_to_hex(v: &[u8]) -> String {
 }
 
 #[cfg(feature = "contract")]
-pub fn near_account_to_evm_address(addr: &[u8]) -> H160 {
-    H160::from_slice(&sdk::keccak(addr)[12..])
+#[inline]
+pub fn keccak(data: &[u8]) -> H256 {
+    sdk::keccak(data)
 }
 
 #[cfg(not(feature = "contract"))]
+#[inline]
+pub fn keccak(data: &[u8]) -> H256 {
+    H256::from_slice(Keccak256::digest(data).as_slice())
+}
+
 pub fn near_account_to_evm_address(addr: &[u8]) -> H160 {
-    H160::from_slice(&Keccak256::digest(addr)[12..])
+    H160::from_slice(&keccak(addr)[12..])
 }
 
 #[cfg(test)]

@@ -6,7 +6,6 @@ use std::{collections::BTreeMap, vec::Vec};
 use alloc::{collections::BTreeMap, vec::Vec};
 
 use primitive_types::{H160, H256, U256};
-use sha3::{Digest, Keccak256};
 
 /// Vivinity value of a memory backend.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -130,8 +129,8 @@ impl<'vicinity> Backend for MemoryBackend<'vicinity> {
     fn code_hash(&self, address: H160) -> H256 {
         self.state
             .get(&address)
-            .map(|v| H256::from_slice(Keccak256::digest(&v.code).as_slice()))
-            .unwrap_or(H256::from_slice(Keccak256::digest(&[]).as_slice()))
+            .map(|v| crate::types::keccak(&v.code))
+            .unwrap_or(crate::types::keccak(&[]))
     }
 
     fn code_size(&self, address: H160) -> usize {

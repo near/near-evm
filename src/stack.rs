@@ -16,7 +16,6 @@ use alloc::{
 
 use core::convert::Infallible;
 use primitive_types::{H160, H256, U256};
-use sha3::{Digest, Keccak256};
 
 use crate::backend::{Apply, Backend, Basic, Log};
 use crate::runtime::Machine;
@@ -160,7 +159,7 @@ impl<'backend, 'machine, 'config, B: Backend> StackExecutor<'backend, 'machine, 
         init_code: Vec<u8>,
         salt: H256,
     ) -> ExitReason {
-        let code_hash = H256::from_slice(Keccak256::digest(&init_code).as_slice());
+        let code_hash = crate::types::keccak(&init_code);
 
         match self.create_inner(
             caller,
@@ -341,19 +340,19 @@ impl<'backend, 'machine, 'config, B: Backend> StackExecutor<'backend, 'machine, 
                 code_hash,
                 salt,
             } => {
-                let mut hasher = Keccak256::new();
-                hasher.input(&[0xff]);
-                hasher.input(&caller[..]);
-                hasher.input(&salt[..]);
-                hasher.input(&code_hash[..]);
-                H256::from_slice(hasher.result().as_slice()).into()
+                let mut bytes = vec![0u8; 1 + 20 + 32 + 32];
+                bytes[0] = 0xff;
+                bytes[1..21].copy_from_slice(&caller[..]);
+                bytes[21..53].copy_from_slice(&salt[..]);
+                bytes[53..85].copy_from_slice(&code_hash[..]);
+                crate::types::keccak(&bytes).into()
             }
             CreateScheme::Legacy { caller } => {
                 let nonce = self.nonce(caller);
                 let mut stream = rlp::RlpStream::new_list(2);
                 stream.append(&caller);
                 stream.append(&nonce);
-                H256::from_slice(Keccak256::digest(&stream.out()).as_slice()).into()
+                crate::types::keccak(&stream.out()).into()
             }
             CreateScheme::Fixed(naddress) => naddress,
         }
@@ -620,11 +619,7 @@ impl<'backend, 'machine, 'config, B: Backend> Handler
 
         let value = self
             .account(address)
-            .and_then(|v| {
-                v.code
-                    .as_ref()
-                    .map(|c| H256::from_slice(Keccak256::digest(&c).as_slice()))
-            })
+            .and_then(|v| v.code.as_ref().map(|c| crate::types::keccak(&c)))
             .unwrap_or(self.backend.code_hash(address));
         value
     }

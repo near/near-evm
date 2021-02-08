@@ -12,7 +12,6 @@ use alloc::vec::Vec;
 
 use core::cmp::min;
 use primitive_types::{H256, U256};
-use sha3::{Digest, Keccak256};
 
 pub fn sha3<H: Handler>(runtime: &mut Runtime) -> Control<H> {
     pop_u256!(runtime, from, len);
@@ -27,8 +26,8 @@ pub fn sha3<H: Handler>(runtime: &mut Runtime) -> Control<H> {
         runtime.get_memory(from, len)
     };
 
-    let ret = Keccak256::digest(data.as_slice());
-    push!(runtime, H256::from_slice(ret.as_slice()));
+    let ret = crate::types::keccak(data.as_slice());
+    push!(runtime, ret);
 
     Control::Continue
 }
@@ -259,7 +258,7 @@ pub fn create<H: Handler>(runtime: &mut Runtime, is_create2: bool, handler: &mut
 
     let scheme = if is_create2 {
         pop!(runtime, salt);
-        let code_hash = H256::from_slice(Keccak256::digest(&code).as_slice());
+        let code_hash = crate::types::keccak(&code);
         CreateScheme::Create2 {
             caller: runtime.context.address,
             salt,

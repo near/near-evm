@@ -224,6 +224,7 @@ pub fn predecessor_account_id() -> Vec<u8> {
     }
 }
 
+/// Calls environment keccak256 on given data.
 pub fn keccak(data: &[u8]) -> H256 {
     unsafe {
         exports::keccak256(data.len() as u64, data.as_ptr() as u64, 1);
@@ -233,6 +234,7 @@ pub fn keccak(data: &[u8]) -> H256 {
     }
 }
 
+/// Calls environment panic with data encoded in hex as panic message.
 pub fn panic_hex(data: &[u8]) -> ! {
     let message = crate::types::bytes_to_hex(data).into_bytes();
     unsafe { exports::panic_utf8(message.len() as _, message.as_ptr() as _) }

@@ -82,8 +82,8 @@ const HEX_ALPHABET: &[u8; 16] = b"0123456789abcdef";
 pub fn bytes_to_hex(v: &[u8]) -> String {
     let mut result = String::new();
     for x in v {
-        result.push(HEX_ALPHABET[(x % 16) as usize] as char);
         result.push(HEX_ALPHABET[(x / 16) as usize] as char);
+        result.push(HEX_ALPHABET[(x % 16) as usize] as char);
     }
     result
 }
@@ -96,4 +96,17 @@ pub fn near_account_to_evm_address(addr: &[u8]) -> H160 {
 #[cfg(not(feature = "contract"))]
 pub fn near_account_to_evm_address(addr: &[u8]) -> H160 {
     H160::from_slice(&Keccak256::digest(addr)[12..])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hex() {
+        assert_eq!(
+            bytes_to_hex(&[0u8, 1u8, 255u8, 16u8]),
+            "0001ff10".to_string()
+        );
+    }
 }

@@ -12,6 +12,7 @@ use_contract!(soltest, "tests/build/SolTests.abi");
 use_contract!(cryptozombies, "tests/build/ZombieOwnership.abi");
 use_contract!(bfactory, "tests/build/BFactory.abi");
 use_contract!(ttoken, "tests/build/TToken.abi");
+use_contract!(tmath, "tests/build/TMath.abi");
 
 struct TestRunner {
     backend: test_backend::TestBackend,
@@ -29,7 +30,7 @@ impl TestRunner {
     }
 
     pub fn deploy_code(&mut self, code: Vec<u8>) -> H160 {
-        Runner::deploy_code(&mut self.backend, &code)
+        Runner::deploy_code(&mut self.backend, &code).1
     }
 
     pub fn call(&mut self, address: H160, input: Vec<u8>) -> Vec<u8> {
@@ -42,6 +43,7 @@ impl TestRunner {
             .try_to_vec()
             .unwrap(),
         )
+        .1
     }
 
     pub fn view(&mut self, sender: H160, address: H160, value: U256, input: Vec<u8>) -> Vec<u8> {
@@ -58,6 +60,7 @@ impl TestRunner {
             .try_to_vec()
             .unwrap(),
         )
+        .1
     }
 }
 
@@ -75,6 +78,16 @@ fn test_runner_deploy() {
     let (input, _decoder) = cryptozombies::functions::balance_of::call(H160::zero().0);
     let result = runner.view(H160::zero(), address, U256::zero(), input);
     assert_eq!(U256::from_big_endian(&result), U256::from(1));
+}
+
+#[test]
+fn test_tmath() {
+    let mut runner = TestRunner::new();
+    let address =
+        runner.deploy_code(hex::decode(&include_bytes!("build/TMath.bin").to_vec()).unwrap());
+    let (input, _decoder) = tmath::functions::calc_bsub::call(1, 2);
+    let result = runner.call(address, input);
+    assert!(String::from_utf8_lossy(&result).contains("ERR_SUB_UNDERFLOW"));
 }
 
 #[test]

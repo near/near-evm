@@ -11,6 +11,7 @@ mod test_backend;
 use_contract!(soltest, "tests/build/SolTests.abi");
 use_contract!(cryptozombies, "tests/build/ZombieOwnership.abi");
 use_contract!(bfactory, "tests/build/BFactory.abi");
+use_contract!(bpool, "tests/build/BPool.abi");
 use_contract!(ttoken, "tests/build/TToken.abi");
 use_contract!(tmath, "tests/build/TMath.abi");
 
@@ -34,7 +35,7 @@ impl TestRunner {
     }
 
     pub fn call(&mut self, address: H160, input: Vec<u8>) -> Vec<u8> {
-        Runner::call(
+        let result = Runner::call(
             &mut self.backend,
             &FunctionCallArgs {
                 contract: address.0,
@@ -42,8 +43,8 @@ impl TestRunner {
             }
             .try_to_vec()
             .unwrap(),
-        )
-        .1
+        );
+        result.1
     }
 
     pub fn view(&mut self, sender: H160, address: H160, value: U256, input: Vec<u8>) -> Vec<u8> {
@@ -51,14 +52,12 @@ impl TestRunner {
         value.to_big_endian(&mut amount);
         Runner::view(
             &mut self.backend,
-            &ViewCallArgs {
+            ViewCallArgs {
                 sender: sender.0,
                 address: address.0,
                 amount,
                 input,
-            }
-            .try_to_vec()
-            .unwrap(),
+            },
         )
         .1
     }
@@ -118,15 +117,14 @@ fn test_balancer() {
     let address =
         runner.deploy_code(hex::decode(&include_bytes!("build/BFactory.bin").to_vec()).unwrap());
     let (input, _) = bfactory::functions::new_b_pool::call();
-    let pool_address = bfactory::functions::new_b_pool::decode_output(&runner.view(
-        H160::zero(),
-        address,
-        U256::zero(),
-        input,
-    ))
-    .unwrap();
+    let pool_address =
+        bfactory::functions::new_b_pool::decode_output(&runner.call(address, input)).unwrap();
     assert_eq!(
         hex::encode(pool_address),
         "f55df5ec5c8c64582378dce8eee51ec4af77ccd6"
     );
+    let (input, _) = bpool::functions::get_controller::call();
+    let result =
+        bpool::functions::get_controller::decode_output(&runner.call(pool_address, input)).unwrap();
+    assert_eq!(result, near_account_to_evm_address(b"alice"));
 }

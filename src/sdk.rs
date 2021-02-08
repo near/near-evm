@@ -226,7 +226,7 @@ pub fn predecessor_account_id() -> Vec<u8> {
 
 pub fn keccak(data: &[u8]) -> H256 {
     unsafe {
-        exports::keccak256(data.len() as u64, data.as_ptr() as u64, 0);
+        exports::keccak256(data.len() as u64, data.as_ptr() as u64, 1);
         let bytes = H256::zero();
         exports::read_register(1, bytes.0.as_ptr() as *const u64 as u64);
         bytes

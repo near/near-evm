@@ -65,8 +65,8 @@ mod contract {
     pub extern "C" fn deploy_code() {
         let input = sdk::read_input();
         let mut backend = Backend::new(CHAIN_ID, predecessor_address());
-        let result = runner::Runner::deploy_code(&mut backend, &input);
-        sdk::return_output(&(result.1).0);
+        let (reason, return_value) = runner::Runner::deploy_code(&mut backend, &input);
+        process_exit_reason(reason, &return_value.0);
     }
 
     #[no_mangle]
@@ -84,8 +84,9 @@ mod contract {
     #[no_mangle]
     pub extern "C" fn view() {
         let input = sdk::read_input();
-        let mut backend = Backend::new(CHAIN_ID, H160::zero());
-        let (reason, return_value) = runner::Runner::view(&mut backend, &input);
+        let args = crate::types::ViewCallArgs::try_from_slice(&input).unwrap();
+        let mut backend = Backend::new(CHAIN_ID, H160::from_slice(&args.sender));
+        let (reason, return_value) = runner::Runner::view(&mut backend, args);
         process_exit_reason(reason, &return_value);
     }
 

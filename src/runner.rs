@@ -67,11 +67,10 @@ impl Runner {
         })
     }
 
-    pub fn view<B>(backend: &mut B, input: &[u8]) -> (ExitReason, Vec<u8>)
+    pub fn view<B>(backend: &mut B, args: ViewCallArgs) -> (ExitReason, Vec<u8>)
     where
         B: ApplyBackend + Backend,
     {
-        let args = ViewCallArgs::try_from_slice(&input).unwrap();
         let value = U256::from_big_endian(&args.amount);
         Self::execute(backend, value, false, |executor| {
             executor.transact_call(

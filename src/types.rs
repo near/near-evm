@@ -69,9 +69,10 @@ pub fn u256_to_arr(value: &U256) -> [u8; 32] {
 pub fn log_to_bytes(log: Log) -> Vec<u8> {
     let mut result = vec![0u8; 1 + log.topics.len() * 32 + log.data.len()];
     result[0] = log.topics.len() as u8;
-    let index = 1;
+    let mut index = 1;
     for topic in log.topics.iter() {
         result[index..index + 32].copy_from_slice(&topic.0);
+        index += 32;
     }
     result[index..].copy_from_slice(&log.data);
     result

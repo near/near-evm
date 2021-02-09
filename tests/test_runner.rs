@@ -15,6 +15,10 @@ use_contract!(bpool, "tests/build/BPool.abi");
 use_contract!(ttoken, "tests/build/TToken.abi");
 use_contract!(tmath, "tests/build/TMath.abi");
 
+fn alice_addr() -> H160 {
+    near_account_to_evm_address(b"alice")
+}
+
 struct TestRunner {
     backend: test_backend::TestBackend,
 }
@@ -22,7 +26,7 @@ struct TestRunner {
 impl TestRunner {
     pub fn new() -> Self {
         Self {
-            backend: test_backend::TestBackend::new(H160::zero()),
+            backend: test_backend::TestBackend::new(alice_addr()),
         }
     }
 
@@ -44,6 +48,7 @@ impl TestRunner {
             .try_to_vec()
             .unwrap(),
         );
+        assert!(result.0.is_succeed(), format!("{:?}", result.1));
         result.1
     }
 
@@ -85,15 +90,13 @@ fn test_tmath() {
     let address =
         runner.deploy_code(hex::decode(&include_bytes!("build/TMath.bin").to_vec()).unwrap());
     let (input, _decoder) = tmath::functions::calc_bsub::call(1, 2);
-    let result = runner.call(address, input);
+    let result = runner.view(alice_addr(), address, U256::zero(), input);
     assert!(String::from_utf8_lossy(&result).contains("ERR_SUB_UNDERFLOW"));
 }
 
-#[test]
-fn test_ttoken() {
-    let mut runner = TestRunner::new();
-    let alice_addr = near_account_to_evm_address(b"alice");
-    runner.set_origin(alice_addr);
+/// Creates and mints 5m of token for alice.
+fn create_ttoken(runner: &mut TestRunner) -> H160 {
+    runner.set_origin(alice_addr());
     let input = ttoken::constructor(
         hex::decode(&include_bytes!("build/TToken.bin").to_vec()).unwrap(),
         "XYZ",
@@ -101,19 +104,28 @@ fn test_ttoken() {
         18,
     );
     let address = runner.deploy_code(input);
-    let (input, _) = ttoken::functions::mint::call(&alice_addr.0, 5_000_000);
+    let (input, _) = ttoken::functions::mint::call(&alice_addr().0, 10 * 10u128.pow(18));
     let _ = runner.call(address, input);
-    let (input, _) = ttoken::functions::transfer::call(&address.0, 1_000);
+    address
+}
+
+#[test]
+fn test_ttoken() {
+    let mut runner = TestRunner::new();
+    let address = create_ttoken(&mut runner);
+    let (input, _) = ttoken::functions::transfer::call(&address.0, 1 * 10u128.pow(18));
     let _ = runner.call(address, input);
-    let (input, _) = ttoken::functions::balance_of::call(&alice_addr.0);
+    let (input, _) = ttoken::functions::balance_of::call(&alice_addr().0);
     let result = runner.view(address, address, U256::zero(), input);
-    assert_eq!(U256::from_big_endian(&result), U256::from(4_999_000));
+    assert_eq!(
+        U256::from_big_endian(&result),
+        U256::from(9 * 10u128.pow(18))
+    );
 }
 
 #[test]
 fn test_balancer() {
     let mut runner = TestRunner::new();
-    runner.set_origin(near_account_to_evm_address(b"alice"));
     let address =
         runner.deploy_code(hex::decode(&include_bytes!("build/BFactory.bin").to_vec()).unwrap());
     let (input, _) = bfactory::functions::new_b_pool::call();
@@ -127,4 +139,24 @@ fn test_balancer() {
     let result =
         bpool::functions::get_controller::decode_output(&runner.call(pool_address, input)).unwrap();
     assert_eq!(result, near_account_to_evm_address(b"alice"));
+
+    let token_address = create_ttoken(&mut runner);
+    let _ = runner.call(
+        token_address,
+        ttoken::functions::approve::call(&pool_address.0, 10 * 10u128.pow(18)).0,
+    );
+
+    let _ = runner.call(
+        pool_address,
+        bpool::functions::bind::call(token_address, 10 * 10u128.pow(18), 5 * 10u128.pow(18)).0,
+    );
+
+    let result = ttoken::functions::balance_of::decode_output(&runner.view(
+        alice_addr(),
+        token_address,
+        U256::zero(),
+        ttoken::functions::balance_of::call(alice_addr().0).0,
+    ))
+    .unwrap();
+    assert_eq!(result, U256::zero());
 }

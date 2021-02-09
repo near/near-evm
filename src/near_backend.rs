@@ -28,6 +28,10 @@ impl Backend {
         sdk::write_storage(&address_to_key(KeyPrefix::Code, address), code);
     }
 
+    pub fn remove_code(address: &H160) {
+        sdk::remove_storage(&address_to_key(KeyPrefix::Code, address))
+    }
+
     pub fn get_code(address: &H160) -> Vec<u8> {
         sdk::read_storage(&address_to_key(KeyPrefix::Code, address)).unwrap_or_else(Vec::new)
     }
@@ -37,6 +41,10 @@ impl Backend {
             &address_to_key(KeyPrefix::Nonce, address),
             &u256_to_arr(nonce),
         );
+    }
+
+    pub fn remove_nonce(address: &H160) {
+        sdk::remove_storage(&address_to_key(KeyPrefix::Nonce, address))
     }
 
     pub fn get_nonce(address: &H160) -> U256 {
@@ -52,10 +60,18 @@ impl Backend {
         );
     }
 
+    pub fn remove_balance(address: &H160) {
+        sdk::remove_storage(&address_to_key(KeyPrefix::Balance, address))
+    }
+
     pub fn get_balance(address: &H160) -> U256 {
         sdk::read_storage(&address_to_key(KeyPrefix::Balance, address))
             .map(|value| U256::from_big_endian(&value))
             .unwrap_or_else(U256::zero)
+    }
+
+    pub fn remove_storage(address: &H160, key: &H256) {
+        sdk::remove_storage(&storage_to_key(address, key));
     }
 
     pub fn set_storage(address: &H160, key: &H256, value: &H256) {
@@ -68,7 +84,19 @@ impl Backend {
             .unwrap_or_else(H256::default)
     }
 
-    pub fn remove_account(_address: &H160) {}
+    /// Removes all storage for given address.
+    pub fn remove_all_storage(_address: &H160) {
+        // TODO: remove storage prefix.
+        // Currently there is no way to prefix delete from trie state.
+    }
+
+    /// Removes all the account information.
+    pub fn remove_account(address: &H160) {
+        Backend::remove_nonce(address);
+        Backend::remove_balance(address);
+        Backend::remove_code(address);
+        Backend::remove_storage(address);
+    }
 }
 
 impl crate::backend::Backend for Backend {
@@ -164,19 +192,20 @@ impl ApplyBackend for Backend {
                     }
 
                     if reset_storage {
-                        // TODO: remove storage prefix.
+                        Backend::remove_all_storage(&address);
                     }
 
                     for (index, value) in storage {
                         if value == H256::default() {
-                            // TODO: remove
+                            Backend::remove_storage(&address, &index);
                         } else {
                             Backend::set_storage(&address, &index, &value);
                         }
                     }
 
                     if delete_empty {
-                        // TODO: remove account if empty
+                        Backend::remove_nonce(&address);
+                        Backend::remove_balance(&address);
                     }
                 }
                 Apply::Delete { address } => Backend::remove_account(&address),

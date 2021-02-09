@@ -81,8 +81,8 @@ impl Backend for TestBackend {
         unimplemented!()
     }
 
-    fn code_size(&self, _address: H160) -> usize {
-        unimplemented!()
+    fn code_size(&self, address: H160) -> usize {
+        self.codes.get(&address).unwrap_or(&vec![]).len()
     }
 
     fn code(&self, address: H160) -> Vec<u8> {
@@ -128,6 +128,7 @@ impl ApplyBackend for TestBackend {
                     }
                     let s = self.storages.entry(address).or_default();
                     for (index, value) in storage {
+                        println!("  {} {}", index, value);
                         s.insert(index, value);
                     }
                 }

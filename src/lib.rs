@@ -66,6 +66,7 @@ mod contract {
         let input = sdk::read_input();
         let mut backend = Backend::new(CHAIN_ID, predecessor_address());
         let (reason, return_value) = runner::Runner::deploy_code(&mut backend, &input);
+        // TODO: charge for storage.
         process_exit_reason(reason, &return_value.0);
     }
 
@@ -74,6 +75,7 @@ mod contract {
         let input = sdk::read_input();
         let mut backend = Backend::new(CHAIN_ID, predecessor_address());
         let (reason, return_value) = runner::Runner::call(&mut backend, &input);
+        // TODO: charge for storage.
         process_exit_reason(reason, &return_value);
     }
 

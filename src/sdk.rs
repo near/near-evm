@@ -138,7 +138,7 @@ mod exports {
             register_id: u64,
         ) -> u64;
         pub(crate) fn storage_read(key_len: u64, key_ptr: u64, register_id: u64) -> u64;
-        fn storage_remove(key_len: u64, key_ptr: u64, register_id: u64) -> u64;
+        pub(crate) fn storage_remove(key_len: u64, key_ptr: u64, register_id: u64) -> u64;
         fn storage_has_key(key_len: u64, key_ptr: u64) -> u64;
         fn storage_iter_prefix(prefix_len: u64, prefix_ptr: u64) -> u64;
         fn storage_iter_range(start_len: u64, start_ptr: u64, end_len: u64, end_ptr: u64) -> u64;
@@ -198,6 +198,12 @@ pub fn write_storage(key: &[u8], value: &[u8]) {
             value.as_ptr() as u64,
             0,
         );
+    }
+}
+
+pub fn remove_storage(key: &[u8]) {
+    unsafe {
+        exports::storage_remove(key.len() as u64, key.as_ptr() as u64, 0);
     }
 }
 

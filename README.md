@@ -13,9 +13,9 @@ To develop Rust contracts you would need to:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-2. Add a WebAssembly target to your Rust toolchain:
+2. cd into root dir of this repo, add a WebAssembly target to your Rust toolchain:
 ```bash
-rustup target add wasm32-unknown-unknown --toolchain stable
+rustup target add wasm32-unknown-unknown
 ```
 
 ### Building

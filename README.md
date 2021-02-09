@@ -81,7 +81,7 @@ near deploy --accountId=subname.myaccount.testnet --wasmFile=res/near_evm.wasm
       cargo test --lib
       ```
 
-3. To run the RPC tests you must [run a local NEAR node](https://docs.near.org/docs/local-setup/local-dev-node):
+3. To run the RPC tests you must [run a local NEAR node](https://docs.near.org/docs/develop/node/running-a-node):
       1. Check out [`nearcore`](https://github.com/nearprotocol/nearcore) from Github
       2. Compile and run `nearcore`
       ```sh

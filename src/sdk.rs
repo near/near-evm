@@ -41,7 +41,7 @@ mod exports {
         // # Miscellaneous API #
         // #####################
         pub(crate) fn value_return(value_len: u64, value_ptr: u64);
-        fn panic();
+        pub(crate) fn panic();
         pub(crate) fn panic_utf8(len: u64, ptr: u64);
         pub(crate) fn log_utf8(len: u64, ptr: u64);
         fn log_utf16(len: u64, ptr: u64);
@@ -150,7 +150,6 @@ mod exports {
         fn validator_stake(account_id_len: u64, account_id_ptr: u64, stake_ptr: u64);
         fn validator_total_stake(stake_ptr: u64);
     }
-
 }
 
 pub fn read_input() -> Vec<u8> {
@@ -213,6 +212,18 @@ pub fn block_timestamp() -> u64 {
 
 pub fn block_index() -> u64 {
     unsafe { exports::block_index() }
+}
+
+#[allow(dead_code)]
+pub fn panic() {
+    unsafe { exports::panic() }
+}
+
+#[allow(dead_code)]
+pub fn panic_utf8(bytes: &[u8]) {
+    unsafe {
+        exports::panic_utf8(bytes.len() as u64, bytes.as_ptr() as u64);
+    }
 }
 
 pub fn log_utf8(bytes: &[u8]) {

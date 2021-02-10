@@ -95,7 +95,7 @@ impl Backend {
         Backend::remove_nonce(address);
         Backend::remove_balance(address);
         Backend::remove_code(address);
-        Backend::remove_storage(address);
+        Backend::remove_all_storage(address);
     }
 }
 

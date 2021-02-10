@@ -1,107 +1,127 @@
 # NEAR EVM
 
-EVM interpreter as a NEAR smart contract.
+EVM interpreter as a NEAR smart contract. This uses the EVM interpreter from [SputnikVM].
 
-It uses the EVM interpreter from [SputnikVM](https://github.com/rust-blockchain/evm).
+Network  | Account
+:------- | :-----------------------
+LocalNet | `evm.test.near`
+BetaNet  | `evm.$MYACCOUNT.betanet`
+TestNet  | `evm.$MYACCOUNT.testnet`
 
 ### Prerequisites
 
-To develop Rust contracts you would need to:
+To develop Rust contracts, change into the top-level directory in this
+repository, and do the following:
 
-1. Install [Rustup](https://rustup.rs):
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+1. Make sure you have the newest version of the [NEAR CLI] installed by running:
 
-2. cd into root dir of this repo, add a WebAssembly target to your Rust toolchain:
-```bash
-rustup target add wasm32-unknown-unknown
-```
+  ```shell
+  npm install -g near-cli
+  ```
+
+2. Install [Rustup](https://rustup.rs):
+
+  ```shell
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  ```
+
+3. Add a WebAssembly target to your Rust toolchain:
+
+  ```shell
+  rustup target add wasm32-unknown-unknown
+  ```
 
 ### Building
 
 ```shell
-$ ./build.sh
+./build.sh
 ```
 
 This will build the contract code in `res/near_evm.wasm`.
 
-### Usage
+### Deployment
 
-Deploy contract on TestNet:
+Deploy the EVM contract:
 
-* Make sure you have the newest version of the NEAR CLI installed by running:
+* If you are using BetaNet or TestNet, execute `near login`.
 
-```shell
-npm install -g near-cli
-```
+* If you are using LocalNet, set the `NODE_ENV=local` environment variable
+  prior to executing any of the commands below.
 
-* If you are using TestNet, call `near login` (if you are using local node use `NODE_ENV=development` before commands below).
+* Create the contract account:
 
-* Create contract's account, e.g. we will use `evm`:
-```shell
-near create_account evm --masterAccount=<account you used in near login/test.near for local>
-```
+  ```shell
+  # LocalNet
+  near create-account evm.test.near --masterAccount=test.near
 
-for *testnet* example (for example basic logged in account: `myaccount.testnet``):
-```shell
-near create_account subname.myaccount.testnet --masterAccount=myaccount.testnet
-```
+  # BetaNet
+  near create-account evm.myaccount.betanet --masterAccount=myaccount.betanet
 
-* Deploy the compiled contract from `res/near_evm.wasm` at the building step:
-```shell
-near deploy --accountId=evm --wasmFile=res/near_evm.wasm
-```
+  # TestNet
+  near create-account evm.myaccount.testnet --masterAccount=myaccount.testnet
+  ```
 
-for `testnet`:
-```shell
-near deploy --accountId=subname.myaccount.testnet --wasmFile=res/near_evm.wasm
-```
+* Deploy the built contract from `res/near_evm.wasm`:
 
-* TODO: hackery to actually deploy your EVM contract
+  ```shell
+  # LocalNet
+  near deploy --accountId=evm.test.near --wasmFile=res/near_evm.wasm
+
+  # BetaNet
+  near deploy --accountId=evm.myaccount.betanet --wasmFile=res/near_evm.wasm
+
+  # TestNet
+  near deploy --accountId=evm.myaccount.testnet --wasmFile=res/near_evm.wasm
+  ```
 
 ### Testing
 
-1. Build the evm contract
-    1. Build the Near EVM contract binary
-      ```sh
-      ./build.sh`
+1. Build the EVM contract:
+
+    1. Build the NEAR EVM contract binary:
+      ```shell
+      ./build.sh
       ```
-    2. Ensure truffle is installed
-      ```sh
+    2. Ensure Truffle is installed:
+      ```shell
       npm i -g truffle
       ```
-    3. Build the test contracts
-      ```sh
+    3. Build the test contracts:
+      ```shell
       cd tests && ./build.sh
       ```
 
-2. Run the all tests including integration test
-      ```sh
+2. Run the all tests including integration tests:
+
+      ```shell
       cargo test --lib
       ```
 
 3. To run the RPC tests you must [run a local NEAR node](https://docs.near.org/docs/develop/node/running-a-node):
-      1. Check out [`nearcore`](https://github.com/nearprotocol/nearcore) from Github
-      2. Compile and run `nearcore`
-      ```sh
+
+      1. Check out [`nearcore`](https://github.com/near/nearcore) from GitHub.
+      2. Compile and run `nearcore`:
+      ```shell
       cd nearcore && python scripts/start_unittest.py --local --release
       ```
     1. Run the tests from this directory in another terminal window:
-      ```sh
+      ```shell
       cargo test
       ```
 
-#### Troubleshooting
+### Troubleshooting
 
 You may need to install `nightly` if you get an error similar to the following:
 
-```sh
+```shell
 error[E0554]: `#![feature]` may not be used on the stable release channel
 ```
 
-1. Install `nightly`
-  ```sh
-  rustup toolchain install nightly`
+1. Install `nightly`:
+  ```shell
+  rustup toolchain install nightly
   ```
-2. Run the [Testing](###Testing) commands again
+2. Run the [Testing](###Testing) commands again.
+
+[NEAR CLI]:  https://docs.near.org/docs/tools/near-cli
+[SputnikVM]: https://github.com/rust-blockchain/evm

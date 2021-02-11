@@ -20,6 +20,8 @@ mod near_backend;
 #[cfg(feature = "contract")]
 mod sdk;
 
+use evm_core::ToStr;
+
 #[cfg(feature = "contract")]
 mod contract {
     use borsh::BorshDeserialize;
@@ -57,7 +59,8 @@ mod contract {
         match reason {
             ExitReason::Succeed(_) => sdk::return_output(return_value),
             ExitReason::Revert(_) => sdk::panic_hex(&return_value),
-            _ => unreachable!(),
+            ExitReason::Error(error) => sdk::panic_utf8(error.to_str().as_bytes()),
+            ExitReason::Fatal(error) => sdk::panic_utf8(error.to_str().as_bytes()),
         }
     }
 

@@ -5,6 +5,10 @@ use alloc::borrow::Cow;
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 
+pub trait ToStr {
+    fn to_str(self) -> &'static str;
+}
+
 /// Trap which indicates that an `ExternalOpcode` has to be handled.
 pub type Trap = ExternalOpcode;
 
@@ -141,6 +145,27 @@ pub enum ExitError {
     Other(Cow<'static, str>),
 }
 
+impl ToStr for ExitError {
+    fn to_str(self) -> &'static str {
+        match self {
+            ExitError::StackUnderflow => "StackUnderflow",
+            ExitError::StackOverflow => "StackOverflow",
+            ExitError::InvalidJump => "InvalidJump",
+            ExitError::InvalidRange => "InvalidRange",
+            ExitError::DesignatedInvalid => "DesignatedInvalid",
+            ExitError::CallTooDeep => "CallTooDeep",
+            ExitError::CreateCollision => "CreateCollision",
+            ExitError::CreateContractLimit => "CreateContractLimit",
+            ExitError::OutOfOffset => "OutOfOffset",
+            ExitError::OutOfGas => "OutOfGas",
+            ExitError::OutOfFund => "OutOfFund",
+            ExitError::PCUnderflow => "PCUnderflow",
+            ExitError::CreateEmpty => "CreateEmpty",
+            ExitError::Other(_) => "Other",
+        }
+    }
+}
+
 impl From<ExitError> for ExitReason {
     fn from(s: ExitError) -> Self {
         Self::Error(s)
@@ -161,6 +186,17 @@ pub enum ExitFatal {
 
     /// Other fatal errors.
     Other(Cow<'static, str>),
+}
+
+impl ToStr for ExitFatal {
+    fn to_str(self) -> &'static str {
+        match self {
+            ExitFatal::NotSupported => "NotSupported",
+            ExitFatal::UnhandledInterrupt => "UnhandledInterrupt",
+            ExitFatal::CallErrorAsFatal(_) => "CallErrorAsFatal",
+            ExitFatal::Other(_) => "Other",
+        }
+    }
 }
 
 impl From<ExitFatal> for ExitReason {

@@ -16,7 +16,7 @@ mod utils;
 mod valids;
 
 pub use crate::evm_core::error::{
-    Capture, ExitError, ExitFatal, ExitReason, ExitRevert, ExitSucceed, Trap,
+    Capture, ExitError, ExitFatal, ExitReason, ExitRevert, ExitSucceed, ToStr, Trap,
 };
 pub use crate::evm_core::memory::Memory;
 pub use crate::evm_core::opcode::{ExternalOpcode, Opcode};

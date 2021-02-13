@@ -84,18 +84,32 @@ impl Backend {
             .unwrap_or_else(H256::default)
     }
 
+    pub fn is_account_empty(address: &H160) -> bool {
+        let balance = Self::get_balance(address);
+        let nonce = Self::get_nonce(address);
+        let code_len = Self::get_code(address).len();
+        balance == U256::zero() && nonce == U256::zero() && code_len == 0
+    }
+
     /// Removes all storage for given address.
     pub fn remove_all_storage(_address: &H160) {
         // TODO: remove storage prefix.
         // Currently there is no way to prefix delete from trie state.
     }
 
+    // Remove an account if its empty.
+    pub fn remove_account_if_empty(address: &H160) {
+        if Self::is_account_empty(address) {
+            Self::remove_account(address);
+        }
+    }
+
     /// Removes all the account information.
     pub fn remove_account(address: &H160) {
-        Backend::remove_nonce(address);
-        Backend::remove_balance(address);
-        Backend::remove_code(address);
-        Backend::remove_all_storage(address);
+        Self::remove_nonce(address);
+        Self::remove_balance(address);
+        Self::remove_code(address);
+        Self::remove_all_storage(address);
     }
 }
 
@@ -204,8 +218,7 @@ impl ApplyBackend for Backend {
                     }
 
                     if delete_empty {
-                        Backend::remove_nonce(&address);
-                        Backend::remove_balance(&address);
+                        Backend::remove_account_if_empty(&address);
                     }
                 }
                 Apply::Delete { address } => Backend::remove_account(&address),

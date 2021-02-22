@@ -18,6 +18,14 @@ pub type RawAddress = [u8; 20];
 pub type RawU256 = [u8; 32];
 pub type RawH256 = [u8; 32];
 
+/// Arguments for the public `new` method.
+#[derive(BorshSerialize, BorshDeserialize)]
+pub struct NewArgs {
+    /// Owner account that can upgrade the contract or change paramters.
+    pub owner_id: String,
+    pub bridge_prover_id: String,
+}
+
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct FunctionCallArgs {
     pub contract: RawAddress,

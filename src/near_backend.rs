@@ -12,6 +12,7 @@ use crate::types::{
 };
 
 const OWNER_KEY: &[u8; 5] = b"OWNER";
+const BRIDGE_PROVER_KEY: &[u8; 6] = b"BRIDGE";
 
 pub struct Backend {
     chain_id: U256,
@@ -32,6 +33,14 @@ impl Backend {
 
     pub fn get_owner() -> Vec<u8> {
         sdk::read_storage(OWNER_KEY).unwrap_or_else(Vec::new)
+    }
+
+    pub fn set_bridge_prover(account_id: &[u8]) {
+        sdk::write_storage(BRIDGE_PROVER_KEY, account_id)
+    }
+
+    pub fn get_bridge_prover() -> Vec<u8> {
+        sdk::read_storage(BRIDGE_PROVER_KEY).unwrap_or_else(Vec::new)
     }
 
     pub fn set_code(address: &H160, code: &[u8]) {

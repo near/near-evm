@@ -79,7 +79,7 @@ fn test_runner_deploy() {
     assert_eq!(U256::from_big_endian(&result), U256::zero());
     let (input, _decoder) = cryptozombies::functions::create_random_zombie::call("test");
     let _ = runner.call(address, input);
-    let (input, _decoder) = cryptozombies::functions::balance_of::call(H160::zero().0);
+    let (input, _decoder) = cryptozombies::functions::balance_of::call(alice_addr().0);
     let result = runner.view(H160::zero(), address, U256::zero(), input);
     assert_eq!(U256::from_big_endian(&result), U256::from(1));
 }

@@ -21,18 +21,17 @@ mod near_backend;
 #[cfg(feature = "contract")]
 mod sdk;
 
-use evm_core::ToStr;
-
 #[cfg(feature = "contract")]
 mod contract {
     use borsh::BorshDeserialize;
+    use primitive_types::{H160, H256};
 
+    use crate::evm_core::ExitReason;
     use crate::near_backend::Backend;
+    use crate::runtime::ToStr;
+    use crate::types::{near_account_to_evm_address, u256_to_arr, GetStorageAtArgs, NewArgs};
 
     use super::*;
-    use crate::evm_core::ExitReason;
-    use crate::types::{near_account_to_evm_address, u256_to_arr, GetStorageAtArgs};
-    use primitive_types::{H160, H256};
 
     // TODO: consider making a parameter, but migth cost extra.
     const CHAIN_ID: u64 = 1;
@@ -88,8 +87,9 @@ mod contract {
     /// Should be called on deployment.  
     #[no_mangle]
     pub extern "C" fn new() {
-        let input = sdk::read_input();
-        Backend::set_owner(&input);
+        let args = NewArgs::try_from_slice(&sdk::read_input()).expect("Failed to parse");
+        Backend::set_owner(&args.owner_id.into_bytes());
+        Backend::set_bridge_prover(&args.bridge_prover_id.into_bytes());
     }
 
     #[no_mangle]

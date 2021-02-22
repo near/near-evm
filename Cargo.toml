@@ -37,3 +37,4 @@ hex = "0.4.2"
 ethabi = { git = "https://github.com/rust-ethereum/ethabi", rev = "649d11774b43b33a9c3c4570401886698885e8b7" }
 ethabi-contract = { git = "https://github.com/rust-ethereum/ethabi", rev = "649d11774b43b33a9c3c4570401886698885e8b7" }
 ethabi-derive = { git = "https://github.com/rust-ethereum/ethabi", rev = "649d11774b43b33a9c3c4570401886698885e8b7" }
+# near-sdk-sim = { git = "https://github.com/near/near-sdk-rs", tag = "2.4.0" }

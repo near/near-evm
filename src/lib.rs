@@ -1,3 +1,4 @@
+#![feature(num_as_ne_bytes)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(core_intrinsics))]
 #![cfg_attr(not(feature = "std"), feature(alloc_error_handler))]
@@ -64,22 +65,100 @@ mod contract {
         }
     }
 
+    fn handle_storage<F>(f: F)
+    where
+        F: FnOnce() -> (),
+    {
+        let initial_storage = sdk::storage_usage();
+        f();
+        let final_storage = sdk::storage_usage();
+        if final_storage > initial_storage {
+            if sdk::attached_deposit()
+                < ((final_storage - initial_storage) as u128) * sdk::storage_byte_cost()
+            {
+                // TODO: add how much storage needed to error?
+                sdk::panic_utf8(b"LackBalanceForStorage");
+            }
+        } else {
+            // TODO: return funds to caller?
+        }
+    }
+
+    /// Sets the parameters for the EVM contract.
+    /// Should be called on deployment.  
+    #[no_mangle]
+    pub extern "C" fn new() {
+        let input = sdk::read_input();
+        Backend::set_owner(&input);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn set_owner() {
+        assert_eq!(
+            Backend::get_owner(),
+            sdk::predecessor_account_id(),
+            "Must be owner"
+        );
+        let input = sdk::read_input();
+        Backend::set_owner(&input);
+    }
+
+    const CODE_KEY: &[u8; 4] = b"CODE";
+    const CODE_TIMEFRAME_KEY: &[u8; 4] = b"STGE";
+    const UPGRADE_DURATION: u64 = 24 * 60 * 60 * 1_000_000_000;
+
+    #[no_mangle]
+    pub extern "C" fn get_owner() {
+        sdk::return_output(&Backend::get_owner())
+    }
+
+    /// Stage new code for deployment.
+    #[no_mangle]
+    pub extern "C" fn stage_upgrade() {
+        assert_eq!(
+            Backend::get_owner(),
+            sdk::predecessor_account_id(),
+            "Must be owner"
+        );
+        let input = sdk::read_input();
+        sdk::write_storage(CODE_KEY, &input);
+        sdk::write_storage(CODE_TIMEFRAME_KEY, &sdk::block_timestamp().to_le_bytes());
+    }
+
+    /// Deploy staged upgrade.
+    #[no_mangle]
+    pub extern "C" fn deploy_upgrade() {
+        let timestamp = sdk::read_u64(CODE_TIMEFRAME_KEY).unwrap();
+        if sdk::block_timestamp() <= timestamp + UPGRADE_DURATION {
+            sdk::panic_utf8(b"Too early for upgrade");
+        }
+        let code = sdk::read_storage(CODE_KEY).unwrap();
+        if code.is_empty() {
+            sdk::panic_utf8(b"No staged code");
+        }
+        sdk::write_storage(CODE_KEY, &[]);
+        sdk::self_deploy(&code);
+    }
+
+    /// Deploy new EVM bytecode and returns the address.
     #[no_mangle]
     pub extern "C" fn deploy_code() {
-        let input = sdk::read_input();
-        let mut backend = Backend::new(CHAIN_ID, predecessor_address());
-        let (reason, return_value) = runner::Runner::deploy_code(&mut backend, &input);
-        // TODO: charge for storage.
-        process_exit_reason(reason, &return_value.0);
+        handle_storage(|| {
+            let input = sdk::read_input();
+            let mut backend = Backend::new(CHAIN_ID, predecessor_address());
+            let (reason, return_value) = runner::Runner::deploy_code(&mut backend, &input);
+            process_exit_reason(reason, &return_value.0);
+        });
     }
 
     #[no_mangle]
     pub extern "C" fn call() {
-        let input = sdk::read_input();
-        let mut backend = Backend::new(CHAIN_ID, predecessor_address());
-        let (reason, return_value) = runner::Runner::call(&mut backend, &input);
-        // TODO: charge for storage.
-        process_exit_reason(reason, &return_value);
+        handle_storage(|| {
+            let input = sdk::read_input();
+            let mut backend = Backend::new(CHAIN_ID, predecessor_address());
+            let (reason, return_value) = runner::Runner::call(&mut backend, &input);
+            process_exit_reason(reason, &return_value);
+        });
     }
 
     // TODO: raw_call

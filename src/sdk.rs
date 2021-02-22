@@ -2,7 +2,7 @@ use alloc::{vec, vec::Vec};
 
 use primitive_types::H256;
 
-mod exports {
+pub(crate) mod exports {
 
     #[allow(unused)]
     extern "C" {
@@ -14,7 +14,7 @@ mod exports {
         // ###############
         // # Context API #
         // ###############
-        fn current_account_id(register_id: u64);
+        pub(crate) fn current_account_id(register_id: u64);
         fn signer_account_id(register_id: u64);
         fn signer_account_pk(register_id: u64);
         pub(crate) fn predecessor_account_id(register_id: u64);
@@ -23,12 +23,12 @@ mod exports {
         pub(crate) fn block_index() -> u64;
         pub(crate) fn block_timestamp() -> u64;
         fn epoch_height() -> u64;
-        fn storage_usage() -> u64;
+        pub(crate) fn storage_usage() -> u64;
         // #################
         // # Economics API #
         // #################
         fn account_balance(balance_ptr: u64);
-        fn attached_deposit(balance_ptr: u64);
+        pub(crate) fn attached_deposit(balance_ptr: u64);
         fn prepaid_gas() -> u64;
         fn used_gas() -> u64;
         // ############
@@ -49,7 +49,7 @@ mod exports {
         // ################
         // # Promises API #
         // ################
-        fn promise_create(
+        pub(crate) fn promise_create(
             account_id_len: u64,
             account_id_ptr: u64,
             method_name_len: u64,
@@ -71,14 +71,18 @@ mod exports {
             gas: u64,
         ) -> u64;
         fn promise_and(promise_idx_ptr: u64, promise_idx_count: u64) -> u64;
-        fn promise_batch_create(account_id_len: u64, account_id_ptr: u64) -> u64;
+        pub(crate) fn promise_batch_create(account_id_len: u64, account_id_ptr: u64) -> u64;
         fn promise_batch_then(promise_index: u64, account_id_len: u64, account_id_ptr: u64) -> u64;
         // #######################
         // # Promise API actions #
         // #######################
-        fn promise_batch_action_create_account(promise_index: u64);
-        fn promise_batch_action_deploy_contract(promise_index: u64, code_len: u64, code_ptr: u64);
-        fn promise_batch_action_function_call(
+        pub(crate) fn promise_batch_action_create_account(promise_index: u64);
+        pub(crate) fn promise_batch_action_deploy_contract(
+            promise_index: u64,
+            code_len: u64,
+            code_ptr: u64,
+        );
+        pub(crate) fn promise_batch_action_function_call(
             promise_index: u64,
             method_name_len: u64,
             method_name_ptr: u64,
@@ -87,8 +91,8 @@ mod exports {
             amount_ptr: u64,
             gas: u64,
         );
-        fn promise_batch_action_transfer(promise_index: u64, amount_ptr: u64);
-        fn promise_batch_action_stake(
+        pub(crate) fn promise_batch_action_transfer(promise_index: u64, amount_ptr: u64);
+        pub(crate) fn promise_batch_action_stake(
             promise_index: u64,
             amount_ptr: u64,
             public_key_len: u64,
@@ -188,6 +192,18 @@ pub fn read_storage(key: &[u8]) -> Option<Vec<u8>> {
     }
 }
 
+pub fn read_u64(key: &[u8]) -> Option<u64> {
+    unsafe {
+        if exports::storage_read(key.len() as u64, key.as_ptr() as u64, 0) == 1 {
+            let result: u64 = 0;
+            exports::read_register(0, result.as_ne_bytes().as_ptr() as *const u64 as u64);
+            Some(result)
+        } else {
+            None
+        }
+    }
+}
+
 pub fn write_storage(key: &[u8], value: &[u8]) {
     unsafe {
         exports::storage_write(
@@ -232,6 +248,15 @@ pub fn log_utf8(bytes: &[u8]) {
     }
 }
 
+pub fn current_account_id() -> Vec<u8> {
+    unsafe {
+        exports::current_account_id(1);
+        let bytes: Vec<u8> = vec![0u8; exports::register_len(1) as usize];
+        exports::read_register(1, bytes.as_ptr() as *const u64 as u64);
+        bytes
+    }
+}
+
 pub fn predecessor_account_id() -> Vec<u8> {
     unsafe {
         exports::predecessor_account_id(1);
@@ -256,4 +281,37 @@ pub fn panic_hex(data: &[u8]) -> ! {
     let message = crate::types::bytes_to_hex(data).into_bytes();
     unsafe { exports::panic_utf8(message.len() as _, message.as_ptr() as _) }
     unreachable!()
+}
+
+#[inline]
+pub fn attached_deposit() -> u128 {
+    unsafe {
+        let result: u128 = 0;
+        exports::attached_deposit(result.as_ne_bytes().as_ptr() as _);
+        result
+    }
+}
+
+#[inline]
+pub fn storage_usage() -> u64 {
+    unsafe { exports::storage_usage() }
+}
+
+#[inline]
+pub fn storage_byte_cost() -> u128 {
+    // TODO: should be queried from host when available.
+    100_000_000_000_000_000_000
+}
+
+pub fn self_deploy(code: &[u8]) {
+    unsafe {
+        let account_id = current_account_id();
+        let promise_id =
+            exports::promise_batch_create(account_id.len() as _, account_id.as_ptr() as _);
+        exports::promise_batch_action_deploy_contract(
+            promise_id,
+            code.len() as _,
+            code.as_ptr() as _,
+        );
+    }
 }

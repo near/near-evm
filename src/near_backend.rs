@@ -11,6 +11,8 @@ use crate::types::{
     address_to_key, bytes_to_hex, log_to_bytes, storage_to_key, u256_to_arr, KeyPrefix,
 };
 
+const OWNER_KEY: &[u8; 5] = b"OWNER";
+
 pub struct Backend {
     chain_id: U256,
     origin: H160,
@@ -22,6 +24,14 @@ impl Backend {
             chain_id: U256::from(chain_id),
             origin,
         }
+    }
+
+    pub fn set_owner(account_id: &[u8]) {
+        sdk::write_storage(OWNER_KEY, account_id)
+    }
+
+    pub fn get_owner() -> Vec<u8> {
+        sdk::read_storage(OWNER_KEY).unwrap_or_else(Vec::new)
     }
 
     pub fn set_code(address: &H160, code: &[u8]) {

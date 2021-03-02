@@ -8,6 +8,11 @@ contracts=(
     "ConstructorRevert"
     "PrecompiledFunction"
     "TToken"
+    "BNum"
+    "BToken"
+    "BMath"
+    "BPool"
+    "BFactory"
 )
 
 truffle compile || exit 1

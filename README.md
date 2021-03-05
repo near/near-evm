@@ -124,4 +124,4 @@ error[E0554]: `#![feature]` may not be used on the stable release channel
 2. Run the [Testing](###Testing) commands again.
 
 [NEAR CLI]:  https://docs.near.org/docs/tools/near-cli
-[SputnikVM]: https://github.com/rust-blockchain/evm
+[SputnikVM]: https://github.com/aurora-is-near/sputnikvm

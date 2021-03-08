@@ -105,7 +105,8 @@ mod contract {
 
     const CODE_KEY: &[u8; 4] = b"CODE";
     const CODE_TIMEFRAME_KEY: &[u8; 4] = b"STGE";
-    const UPGRADE_DURATION: u64 = 24 * 60 * 60 * 1_000_000_000;
+    // const UPGRADE_DURATION: u64 = 24 * 60 * 60 * 1_000_000_000; // 1 day in seconds
+    const UPGRADE_DURATION: u64 = 24 * 60 * 60; // 1 day in blocks
 
     #[no_mangle]
     pub extern "C" fn get_owner() {

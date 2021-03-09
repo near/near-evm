@@ -64,6 +64,31 @@ mod contract {
         }
     }
 
+    pub enum Methods {
+        DeployCode,
+        Call,
+        View,
+        GetCode,
+        GetBalance,
+        GetNonce,
+        GetStorageAt,
+    }
+
+    impl ToString for Methods {
+        fn to_string(&self) -> String {
+            use Methods::*;
+            match self {
+                DeployCode => "deploy_code".to_string(),
+                Call => "call".to_string(),
+                View => "view".to_string(),
+                GetCode => "get_code".to_string(),
+                GetBalance => "get_balance".to_string(),
+                GetNonce => "get_nonce".to_string(),
+                GetStorageAt => "get_storage_at".to_string(),
+            }
+        }
+    }
+
     #[no_mangle]
     pub extern "C" fn deploy_code() {
         let input = sdk::read_input();

@@ -64,13 +64,24 @@ mod contract {
         }
     }
 
+    /// All available methods available for the EVM contract.
+    ///
+    /// This makes it easier to get the correct method strings to use when using
+    /// the library.
     pub enum Methods {
+        /// "deploy_code"
         DeployCode,
+        /// "call"
         Call,
+        /// "view"
         View,
+        /// "get_code"
         GetCode,
+        /// "get_balance"
         GetBalance,
+        /// "get_nonce"
         GetNonce,
+        /// "get_storage_at"
         GetStorageAt,
     }
 

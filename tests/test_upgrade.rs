@@ -10,13 +10,6 @@ near_sdk_sim::lazy_static! {
 
 const EVM_CONTRACT: &str = "evm_contract";
 
-// Deploy
-// init with owner
-// change owner
-// fail to change from another account
-// stage contract
-// upload contract
-
 fn init() -> (UserAccount, UserAccount) {
     let master_account = near_sdk_sim::init_simulator(None);
     let initial_supply: Balance = near_sdk_sim::to_yocto("1000000").into();

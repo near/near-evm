@@ -1,3 +1,7 @@
+:warning: This repository contains obsolete EVM contract experiments.
+
+Find current development at: https://github.com/aurora-is-near/aurora-engine
+
 # NEAR EVM
 
 EVM interpreter as a NEAR smart contract. This uses the EVM interpreter from [SputnikVM].
